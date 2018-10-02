@@ -39,27 +39,9 @@ class NLPTools(ApplicationContext:KpexContext) extends KpexClass(ApplicationCont
     Result = Result.replace("\"","")
     Result
   }
-//  private def NormalizeWordAndLemmatize(Word: String): String = {
-//    val stemmer = new Stemmer()
-//    var ResultString = replaceExtraCharactersFromWord(Word)
-//    ResultString = stemmer.stem(ResultString)
-//    val wordLemmas = plainTextToLemmas(ResultString)
-//    if (wordLemmas != null && !wordLemmas.isEmpty)
-//      ResultString = wordLemmas(0)
-//    else
-//      ResultString = ""
-//    ResultString
-//  }
 
   private def NormalizeWord(Word: String): String = {
-//    val stemmer = new Stemmer()
     var ResultString = replaceExtraCharactersFromWord(Word)
-//    ResultString = stemmer.stem(ResultString)
-//    val wordLemmas = plainTextToLemmas(ResultString)
-//    if (wordLemmas != null && !wordLemmas.isEmpty)
-//      ResultString = wordLemmas(0)
-//    else
-//      ResultString = ""
     ResultString
   }
   def GetNormalizedAndLemmatizedWord(Word: String): String = {
