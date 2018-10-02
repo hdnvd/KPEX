@@ -42,16 +42,15 @@ class NLPTools(ApplicationContext:KpexContext) extends KpexClass(ApplicationCont
 
   private def NormalizeWord(Word: String): String = {
     var ResultString = replaceExtraCharactersFromWord(Word)
-    ResultString
+    stem(ResultString)
   }
   def GetNormalizedAndLemmatizedWord(Word: String): String = {
-    val stemmer = new Stemmer()
     var ResultString = replaceExtraCharactersFromWord(Word)
     if(isStopWord(Word))
       ResultString = ""
     else
       ResultString=getWordLemmatizedForm(ResultString)
-    ResultString=stemmer.stem(ResultString)
+    ResultString=stem(ResultString)
     ResultString
   }
   def stem(WordName:String): String =
