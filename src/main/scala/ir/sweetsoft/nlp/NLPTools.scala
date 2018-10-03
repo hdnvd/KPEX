@@ -39,7 +39,17 @@ class NLPTools(ApplicationContext:KpexContext) extends KpexClass(ApplicationCont
     Result = Result.replace("\"","")
     Result
   }
-
+  def removeSingleCharactersAndSeparateWithSpace(InputString:String): String =
+  {
+    val words=GetStringWords(InputString)
+    var result=""
+    words.foreach(word=>if(word.trim.length>1)
+    {
+      result=result+" "+word.trim
+    })
+    result=result.trim
+    result
+  }
   private def NormalizeWord(Word: String): String = {
     var ResultString = replaceExtraCharactersFromWord(Word)
     stem(ResultString)
@@ -116,7 +126,7 @@ class NLPTools(ApplicationContext:KpexContext) extends KpexClass(ApplicationCont
     else
       Array()
   }
-  def getWordLemmatizedForm(word:String): String =
+  private def getWordLemmatizedForm(word:String): String =
   {
     val normalWord=word.toLowerCase.trim
     if(appContext.LemmatizationMap.keySet.exists(_ .equals(normalWord)))
