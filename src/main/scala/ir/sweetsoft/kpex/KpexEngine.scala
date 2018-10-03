@@ -4,7 +4,6 @@ import java.io.BufferedOutputStream
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
-import edu.stanford.nlp.process.Stemmer
 import ir.sweetsoft.common.SweetOut
 import ir.sweetsoft.nlp.NLPTools
 import org.apache.hadoop.fs.permission.FsPermission
@@ -49,6 +48,110 @@ class KpexEngine extends KpexContext {
     theVertexMap
   }
 
+  private def CalculateAndGetNounPhrasesRateByWordsRate(SortedVertexMap: Seq[(Long, Double)]): String = {
+    val nlp=new NLPTools(this)
+    var Result = ""
+    val NPMap = NounPhrases.map {
+      np =>
+
+        val nlp=new NLPTools(this)
+        val words = nlp.GetStringWords(np) // Get Single Words Of This NounPhrase
+      var rate = 0d
+
+        words.foreach { word => //Single Word From NounPhrase
+          val wordRate = SortedVertexMap.filter { p =>
+            var vertexName = NewIdentificationMap(p._1)
+            vertexName = nlp.GetNormalizedAndLemmatizedWord(vertexName)
+            vertexName.trim.toLowerCase.equals(word.toLowerCase.trim)
+          }
+          var DistanceSum=0d
+          if (wordRate.nonEmpty) {
+            var vertexName = NewIdentificationMap(wordRate.head._1)
+            DistanceSum=GetDistanceOfWordInPhrase(words,vertexName)
+            //            AverageSimilarity=1d
+            SweetOut.printLine("Sum Of Distance of " + vertexName + " In Phrase "+np+" Is " + DistanceSum,1)
+            if(DistanceSum>0)
+              rate = rate + wordRate.head._2 / (DistanceSum)
+            else
+              rate = rate + wordRate.head._2
+          }
+        }
+        (np, rate)
+    }
+    val SortedNPMap = NPMap.sortBy(f => f._2).reverse
+    var KeyWordIndex = 1
+    SortedNPMap.foreach { np =>
+      val TextLine = s"${KeyWordIndex}\t${np._1}\t${np._2}"
+      KeyWordIndex += 1
+      if (KeyWordIndex <= AppConfig.ResultKeywordsCount + 1) {
+        var Matched=false
+        RealKeyPhrases.foreach { RealKeyPhrase =>
+          SweetOut.printLine("RK:"+RealKeyPhrase+" NP:"+np._1,2)
+          var SuccessfulHit=false
+          if(AppConfig.MeasurementMethod==AppConfig.MEASURE_METHOD_APPROX)
+            SuccessfulHit=np._1.trim.toLowerCase.contains(RealKeyPhrase.toLowerCase.trim) || nlp.removeSingleCharactersAndSeparateWithSpace(np._1.trim.toLowerCase).contains(nlp.removeSingleCharactersAndSeparateWithSpace(RealKeyPhrase.toLowerCase.trim))
+          else
+            SuccessfulHit=np._1.trim.toLowerCase.equals(RealKeyPhrase.toLowerCase.trim)
+          if (SuccessfulHit) {
+            algorithmRate += SortedNPMap.length - KeyWordIndex
+            TruePositivesCount = TruePositivesCount + 1
+            Matched=true
+          }
+
+        }
+        if(Matched)
+          Result += "\n" + TextLine+"\t**"
+        else
+          Result += "\n" + TextLine
+
+      }
+    }
+
+    Result
+  }
+  protected def GetDistanceOfWordInPhrase(PhraseWords:Seq[String], theWord:String): Double = {
+          var DistanceSum:Double = 0d
+          var AverageDistance:Double = 0d
+          var validWordCount=0
+    var InvalidWordCount=0
+          PhraseWords.foreach(SecondaryWord => {
+            if (!theWord.equals(SecondaryWord)) {
+              val Distance = wordEmbed.getEuclideanDistanceBetweenWords(theWord, SecondaryWord)
+              if (Distance != Double.NaN && Distance>0)
+                {
+                  DistanceSum = DistanceSum + Distance
+                  validWordCount=validWordCount+1
+                }
+              else
+                {
+                  InvalidWordCount=InvalidWordCount+1
+                  DistanceSum = DistanceSum + 1
+                }
+
+            }
+//            else
+//              {
+//                DistanceSum = DistanceSum + 0d
+//              }
+          })
+    if(validWordCount+InvalidWordCount>0)
+      AverageDistance=DistanceSum/Math.pow(validWordCount+InvalidWordCount,2)
+
+//    if(validWordCount>0)
+      //{
+//        AverageDistance=AverageDistance/Math.pow(validWordCount,2)
+//        if(InvalidWordCount>0)
+//          DistanceSum=DistanceSum+InvalidWordCount*AverageDistance
+      //}
+//    else
+
+
+
+//          if(DistanceSum <= 2)
+//            DistanceSum=2
+//          AverageDistance = DistanceSum / (PhraseWords.length - 1)
+    AverageDistance
+  }
   protected def RemoveExtraWordsFromNounPhrasesBySimilarity(): Unit = {
     NounPhrases = NounPhrases.flatMap(Phrase => {
 
@@ -83,69 +186,9 @@ class KpexEngine extends KpexContext {
     })
   }
 
-  private def CalculateAndGetNounPhrasesRateByWordsRate(SortedVertexMap: Seq[(Long, Double)]): String = {
-    var Result = ""
-    val NPMap = NounPhrases.map {
-      np =>
-
-        val nlp=new NLPTools(this)
-        val words = np.split(" ") // Get Single Words Of This NounPhrase
-      var rate = 0d
-        words.foreach { word => //Single Word From NounPhrase
-          val wordRate = SortedVertexMap.filter { p =>
-            var vertexName = NewIdentificationMap(p._1)
-//            vertexName = nlp.stem(vertexName)
-//            val vertexNameParts = nlp.plainTextToLemmas(vertexName)
-            vertexName = nlp.GetNormalizedAndLemmatizedWord(vertexName)
-//            if (!vertexNameParts.isEmpty)
-//              vertexName = vertexNameParts(0)
-//            else
-//              vertexName = ""
-//            SweetOut.printLine("Word And VertexName " + word.toLowerCase.trim + ":" + vertexName)
-            vertexName.trim.toLowerCase.equals(word.toLowerCase.trim)
-          }
-          if (wordRate.nonEmpty) {
-            rate = rate + wordRate.head._2
-          }
-        }
-        (np, rate)
-    }
-    val SortedNPMap = NPMap.sortBy(f => f._2).reverse
-    var KeyWordIndex = 1
-    SortedNPMap.foreach { np =>
-      val TextLine = s"${KeyWordIndex}\t${np._1}\t${np._2}"
-      KeyWordIndex += 1
-      if (KeyWordIndex <= AppConfig.ResultKeywordsCount + 1) {
-        var Matched=false
-        RealKeyPhrases.foreach { RealKeyPhrase =>
-          SweetOut.printLine("RK:"+RealKeyPhrase+" NP:"+np._1,2)
-          var SuccessfulHit=false
-          if(AppConfig.MeasurementMethod==AppConfig.MEASURE_METHOD_APPROX)
-            SuccessfulHit=np._1.trim.toLowerCase.contains(RealKeyPhrase.toLowerCase.trim)
-          else
-            SuccessfulHit=np._1.trim.toLowerCase.equals(RealKeyPhrase.toLowerCase.trim)
-          if (SuccessfulHit) {
-            algorithmRate += SortedNPMap.length - KeyWordIndex
-            TruePositivesCount = TruePositivesCount + 1
-            Matched=true
-          }
-
-        }
-        if(Matched)
-          Result += "\n" + TextLine+"\t**"
-        else
-          Result += "\n" + TextLine
-
-      }
-    }
-
-    Result
-  }
 
   protected def NormalizeString(inputString: String): String = {
-    val stemmer = new Stemmer()
     var ResultString = inputString.replace("\t", " ")
-//    ResultString = stemmer.stem(ResultString)
     ResultString
   }
 
@@ -160,12 +203,9 @@ class KpexEngine extends KpexContext {
       if (vertexName.length > 1 && vertexName != "nowhere") {
         realKeyWords.foreach { realKeyword =>
           if (vertexName.trim.toLowerCase.equals(realKeyword.toLowerCase.trim)) {
-//            algorithmRate += AllWordsCount - KeyWordIndex
-            //            TruePositivesCount = TruePositivesCount + 1
           }
 
         }
-        //          val TextLine=s"${vertexName}:${eccentricity}:${closeness}"
         val TextLine = s"${KeyWordIndex}\t${vertexName}\t${closeness}"
         KeyWordIndex += 1
         Result += "\n" + TextLine
