@@ -17,22 +17,24 @@ class nltkAdapter(ApplicationContext:KpexContext) extends KpexClass(ApplicationC
       np =>
 
         val nlp=new NLPTools(appContext)
-        val words=nlp.GetStringWords(np)
-                var npSeqStr = ""
-        words.foreach {
-                  word =>
-                    if (npSeqStr != "")
-                      npSeqStr = npSeqStr + " "
-                    npSeqStr = npSeqStr + nlp.GetNormalizedAndLemmatizedWord(word)
-                }
-//        val npSeq = nlp.plainTextToLemmas(np)
-//        var npSeqStr = ""
-//        npSeq.foreach {
-//          n =>
-//            if (npSeqStr != "")
-//              npSeqStr = npSeqStr + " "
-//            npSeqStr = npSeqStr + n
-//        }
+        var Words=nlp.GetStringWords(np)
+        Words=Words.flatMap(Word=>
+        {
+          val wd=nlp.GetNormalizedAndLemmatizedWord(Word)
+          if(wd.trim!="")
+            Seq(wd)
+          else
+            Seq()
+        })
+        //        val npSeq = nlp.plainTextToLemmas(np, false)
+        var npSeqStr = ""
+        Words.foreach {
+          n =>
+            //            println("NPWord is:"+n)
+            if (npSeqStr != "")
+              npSeqStr = npSeqStr + " "
+            npSeqStr = npSeqStr + n
+        }
         ProcessedNPs = ProcessedNPs ++ Seq(npSeqStr)
     }
     NounPhrases = ProcessedNPs.distinct
