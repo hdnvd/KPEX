@@ -67,11 +67,12 @@ class KpexEngine extends KpexContext {
           var DistanceSum=0d
           if (wordRate.nonEmpty) {
             var vertexName = NewIdentificationMap(wordRate.head._1)
-            DistanceSum=GetDistanceOfWordInPhrase(words,vertexName)
+//            DistanceSum=GetDistanceOfWordInPhrase(words,vertexName)
             //            AverageSimilarity=1d
             SweetOut.printLine("Sum Of Distance of " + vertexName + " In Phrase "+np+" Is " + DistanceSum,1)
+
             if(DistanceSum>0)
-              rate = rate + wordRate.head._2 / (DistanceSum)
+              rate = rate + wordRate.head._2 / DistanceSum
             else
               rate = rate + wordRate.head._2
           }
@@ -129,27 +130,9 @@ class KpexEngine extends KpexContext {
                 }
 
             }
-//            else
-//              {
-//                DistanceSum = DistanceSum + 0d
-//              }
           })
     if(validWordCount+InvalidWordCount>0)
       AverageDistance=DistanceSum/Math.pow(validWordCount+InvalidWordCount,2)
-
-//    if(validWordCount>0)
-      //{
-//        AverageDistance=AverageDistance/Math.pow(validWordCount,2)
-//        if(InvalidWordCount>0)
-//          DistanceSum=DistanceSum+InvalidWordCount*AverageDistance
-      //}
-//    else
-
-
-
-//          if(DistanceSum <= 2)
-//            DistanceSum=2
-//          AverageDistance = DistanceSum / (PhraseWords.length - 1)
     AverageDistance
   }
   protected def RemoveExtraWordsFromNounPhrasesBySimilarity(): Unit = {

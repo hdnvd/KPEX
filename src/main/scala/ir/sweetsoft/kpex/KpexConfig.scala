@@ -33,7 +33,7 @@ class KpexConfig extends Serializable {
   var DatabaseContextURL = "NoURL"
   var DatabaseContextTitle = "NoTitle"
   var HasSimilarityEdgeWeighting=true
-  var MeasurementMethod:Int=MEASURE_METHOD_APPROX
+  var MeasurementMethod:Int=MEASURE_METHOD_EXACT
 
 
   var ResultDirectoryName:String="result"

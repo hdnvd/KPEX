@@ -21,7 +21,7 @@ class MySQLKpexEngine extends KpexEngine  {
       AppConfig.StorageType = AppConfig.MYSQL_MODE
       MysqlConfigs = new Properties
       MysqlConfigs.put("driver", "com.mysql.jdbc.Driver")
-      MysqlConfigs.put("url", "jdbc:mysql://localhost:3306/keyphraseex")
+      MysqlConfigs.put("url", "jdbc:mysql://localhost:3306/keyphraseex?useSSL=false")
       MysqlConfigs.put("user", "root")
       MysqlConfigs.put("password", "Persian1147%")
 
@@ -37,6 +37,7 @@ class MySQLKpexEngine extends KpexEngine  {
         .option("dbtable", "(SELECT * FROM sweetp_kpex_test WHERE id='" + AppConfig.DatabaseTestID + "') test")
         .load()
       val testCollected = test.collect()
+
       AppConfig.NounInfluence = testCollected(0).getDouble(4)
       AppConfig.NounOutInfluence = testCollected(0).getDouble(5)
       AppConfig.AdjectiveInfluence = testCollected(0).getDouble(6)
