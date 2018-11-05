@@ -11,7 +11,7 @@ object SweetOut {
   }
   def printLine(x:Any,Priority:Int): Unit =
   {
-    if(Priority>=1)
+    if(Priority>=4)
       printLine(x)
   }
   def printOne(x:Any): Unit =

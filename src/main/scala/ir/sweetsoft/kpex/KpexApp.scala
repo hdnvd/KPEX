@@ -1,7 +1,6 @@
 package ir.sweetsoft.kpex
 
 import ir.sweetsoft.common.SweetOut
-import ir.sweetsoft.nlp.textBlobAdapter
 import org.apache.spark.sql.SparkSession
 
 object KpexApp extends MySQLKpexEngine {
@@ -13,44 +12,51 @@ object KpexApp extends MySQLKpexEngine {
       .getOrCreate()
     Init(spark,args)
 
-//    SweetOut.printLine("After Init")
-    val inputStringRDD=getInputStringRDD(spark)
-//    SweetOut.printLine("After Init2")
-    var inputString = ""
-    inputStringRDD.collect().foreach {
-      s => inputString += s
-    }
-//    SweetOut.printLine("After Init3")
-    val theGraphIO:GraphIO=new GraphIO(this)
-    val theIO:IO=new IO(this)
-    NounPhrases=new textBlobAdapter(this).GetNounPhrases(spark,inputString)
-//    RemoveExtraWordsFromNounPhrasesBySimilarity()
-    theGraphIO.makeWordGraphFile(spark,inputString)
-    val file = spark.sparkContext.textFile(AppConfig.GraphPath)
+    AppConfig.DatabaseTestIDs.foreach(TestID=>{
+      resetContextData()
+      currentTestID=TestID
+      LoadPerTestArgs(spark,TestID)
+      val inputStringRDD=getInputStringRDD(spark)
 
-    var graph = theGraphIO.LoadGraph(spark,file,wordEmbed)
-    theGraphIO.MakeVisualizedGraphFile(spark,graph)
-    var IdentificationMapText=""
-    NewIdentificationMap.keys.foreach{
-      Key=>
-        IdentificationMapText+=Key+"\t"+NewIdentificationMap(Key)
-    }
-    theIO.WriteToFile(spark,AppConfig.IdentificationMapPath,IdentificationMapText,false)
-    SweetOut.printLine("Graph Size:" + graph.vertices.count(),1)
-    val vertexSeq = graph.vertices.map(v => v._1).collect().toSeq
-    var VertexMap:Seq[(Long,Double)]=null
-    if(AppConfig.GraphImportanceMethod==AppConfig.METHOD_ECCENTERICITY)
-      VertexMap = SweetGraph.getEccentericity(graph, vertexSeq).collect
-    else if(AppConfig.GraphImportanceMethod==AppConfig.METHOD_DEGREE)
-      VertexMap = SweetGraph.getDegree(graph, vertexSeq).collect
-    else if(AppConfig.GraphImportanceMethod==AppConfig.METHOD_CLOSENESS)
-      VertexMap = SweetGraph.getCloseness(spark.sparkContext,graph, vertexSeq)
-    else if(AppConfig.GraphImportanceMethod==AppConfig.METHOD_NE_RANK)
-      VertexMap = SweetGraph.getNE_Rank(graph, vertexSeq).collect
+      var inputString = ""
+      inputStringRDD.collect().foreach {
+        s => inputString += s
+      }
+      //    SweetOut.printLine("After Init3")
+      val theGraphIO:GraphIO=new GraphIO(this)
+      val theIO:IO=new IO(this)
+//      NounPhrases=new textBlobAdapter(this).GetNounPhrases(spark,inputString,currentTestID)
+      NounPhrases=AllNounPhrases(currentTestID)
+      //    RemoveExtraWordsFromNounPhrasesBySimilarity()
+      theGraphIO.makeWordGraphFile(spark,inputString)
+      val file = spark.sparkContext.textFile(AppConfig.GraphPath)
 
-    //    val VertexMap=SweetGraph.getEccentericityAndCloseness(graph,vertexSeq)
-    val Result=WriteOutput(spark,VertexMap,file)
-    //
+      var graph = theGraphIO.LoadGraph(spark,file,wordEmbeds(TestID))
+      theGraphIO.MakeVisualizedGraphFile(spark,graph)
+      var IdentificationMapText=""
+      NewIdentificationMap.keys.foreach{
+        Key=>
+          IdentificationMapText+=Key+"\t"+NewIdentificationMap(Key)
+      }
+      theIO.WriteToFile(spark,AppConfig.IdentificationMapPath,IdentificationMapText,false)
+      SweetOut.printLine("Graph Size:" + graph.vertices.count(),1)
+      val vertexSeq = graph.vertices.map(v => v._1).collect().toSeq
+      var VertexMap:Seq[(Long,Double)]=null
+      if(AppConfig.GraphImportanceMethod==AppConfig.METHOD_ECCENTERICITY)
+        VertexMap = SweetGraph.getEccentericity(graph, vertexSeq).collect
+      else if(AppConfig.GraphImportanceMethod==AppConfig.METHOD_DEGREE)
+        VertexMap = SweetGraph.getDegree(graph, vertexSeq).collect
+      else if(AppConfig.GraphImportanceMethod==AppConfig.METHOD_CLOSENESS)
+        VertexMap = SweetGraph.getCloseness(spark.sparkContext,graph, vertexSeq)
+      else if(AppConfig.GraphImportanceMethod==AppConfig.METHOD_NE_RANK)
+        VertexMap = SweetGraph.getNE_Rank(graph, vertexSeq).collect
+
+      //    val VertexMap=SweetGraph.getEccentericityAndCloseness(graph,vertexSeq)
+      PrepareLocalOutputData(spark,VertexMap,file)
+      //
+    })
+    WriteResultsToStorage(spark)
+
 
 
   }

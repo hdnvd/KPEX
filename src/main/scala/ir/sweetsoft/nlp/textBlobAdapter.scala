@@ -6,44 +6,101 @@ import org.apache.spark.sql.SparkSession
 
 class textBlobAdapter(ApplicationContext:KpexContext) extends KpexClass(ApplicationContext:KpexContext) {
 
-  def GetNounPhrases(spark: SparkSession, inputString: String) : Seq[String] = {
+//  def GetNounPhrases(spark: SparkSession, inputString: String,TestID:Int) : Seq[String] = {
+//    SweetOut.printLine("Loading Noun Phrases...",1)
+//
+//    val dataRDD = spark.sparkContext.makeRDD(Seq(inputString.toLowerCase))
+//    val scriptPath = "python /home/hduser/FinalProject/textblobnp.py"
+//    val pipeRDD = dataRDD.pipe(scriptPath)
+//    SweetOut.printLine("Loaded Noun Phrases From Python",1)
+//    var NounPhrases:Seq[String] = pipeRDD.collect
+//    SweetOut.printLine("Collected Noun Phrases",1)
+//    NounPhrases=NounPhrases.distinct
+//    var ProcessedNPs: Seq[String] = Seq()
+//    NounPhrases.foreach {
+//      np =>
+//        val nlp=new NLPTools(appContext)
+//        var Words=nlp.GetStringWords(np)
+//
+//        Words=Words.flatMap(Word=>
+//        {
+//          val wd=nlp.GetNormalizedAndLemmatizedWord(Word,TestID)
+//          if(wd.trim!="")
+//            Seq(wd)
+//          else
+//            Seq()
+//        })
+//        var npSeqStr = ""
+//        Words.foreach {
+//          n =>
+//            if (npSeqStr != "")
+//              npSeqStr = npSeqStr + " "
+//            npSeqStr = npSeqStr + n
+//        }
+//        ProcessedNPs = ProcessedNPs ++ Seq(npSeqStr)
+//    }
+//    NounPhrases = ProcessedNPs.distinct
+//    SweetOut.printLine("Loading Noun Phrases Completed",1)
+//    NounPhrases
+//  }
+  def GetTotalNounPhrases(spark: SparkSession,TotalInputString: String) : Map[Int,Seq[String]] = {
     SweetOut.printLine("Loading Noun Phrases...",1)
+    SweetOut.printLine(TotalInputString,1)
 
-    val dataRDD = spark.sparkContext.makeRDD(Seq(inputString.toLowerCase))
+    val dataRDD = spark.sparkContext.makeRDD(Seq(TotalInputString.toLowerCase))
     val scriptPath = "python /home/hduser/FinalProject/textblobnp.py"
     val pipeRDD = dataRDD.pipe(scriptPath)
     SweetOut.printLine("Loaded Noun Phrases From Python",1)
-    var NounPhrases:Seq[String] = pipeRDD.collect
+    var TotalNounPhrases:Seq[String] = pipeRDD.collect
     SweetOut.printLine("Collected Noun Phrases",1)
-    NounPhrases=NounPhrases.distinct
+//    NounPhrases=NounPhrases.distinct
     var ProcessedNPs: Seq[String] = Seq()
-    NounPhrases.foreach {
+    var TestID = -1
+    var AllNounPhrases: Map[Int,Seq[String]] = Map()
+  var TestIndex=0
+    TotalNounPhrases.foreach {
       np =>
-//        println("NP is:"+np)
-        val nlp=new NLPTools(appContext)
-        var Words=nlp.GetStringWords(np)
+        SweetOut.printLine("NP Is "+np,1)
 
-        Words=Words.flatMap(Word=>
-        {
-          val wd=nlp.GetNormalizedAndLemmatizedWord(Word)
-          if(wd.trim!="")
-            Seq(wd)
-          else
-            Seq()
-        })
-//        val npSeq = nlp.plainTextToLemmas(np, false)
-        var npSeqStr = ""
-        Words.foreach {
-          n =>
-//            println("NPWord is:"+n)
-            if (npSeqStr != "")
-              npSeqStr = npSeqStr + " "
-            npSeqStr = npSeqStr + n
-        }
-        ProcessedNPs = ProcessedNPs ++ Seq(npSeqStr)
+        if(np.contains(ApplicationContext.AppConfig.TEST_SEPARATOR_TEXT))
+          {
+            if(TestID>0)
+              {
+                SweetOut.printLine("TestID Is "+TestID,1)
+                AllNounPhrases=AllNounPhrases+(TestID->ProcessedNPs.distinct)
+                ProcessedNPs=Seq()
+              }
+            if(TestIndex<ApplicationContext.AppConfig.DatabaseTestIDs.length)
+              TestID=ApplicationContext.AppConfig.DatabaseTestIDs(TestIndex)
+            TestIndex=TestIndex+1
+          }
+        else
+          {
+            val nlp=new NLPTools(appContext)
+            var Words=nlp.GetStringWords(np)
+
+            Words=Words.flatMap(Word=>
+            {
+              val wd=nlp.GetNormalizedAndLemmatizedWord(Word,TestID)
+//              val wd=""
+              if(wd.trim!="")
+                Seq(wd)
+              else
+                Seq()
+            })
+            var npSeqStr = ""
+            Words.foreach {
+              n =>
+                if (npSeqStr != "")
+                  npSeqStr = npSeqStr + " "
+                npSeqStr = npSeqStr + n
+            }
+            ProcessedNPs = ProcessedNPs ++ Seq(npSeqStr)
+          }
+
     }
-    NounPhrases = ProcessedNPs.distinct
+//    NounPhrases = ProcessedNPs.distinct
     SweetOut.printLine("Loading Noun Phrases Completed",1)
-    NounPhrases
+    AllNounPhrases
   }
 }

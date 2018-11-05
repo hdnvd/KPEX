@@ -54,12 +54,12 @@ class NLPTools(ApplicationContext:KpexContext) extends KpexClass(ApplicationCont
     var ResultString = replaceExtraCharactersFromWord(Word)
     stem(ResultString)
   }
-  def GetNormalizedAndLemmatizedWord(Word: String): String = {
+  def GetNormalizedAndLemmatizedWord(Word: String,TestID:Int): String = {
     var ResultString = replaceExtraCharactersFromWord(Word)
     if(isStopWord(Word))
       ResultString = ""
     else
-      ResultString=getWordLemmatizedForm(ResultString)
+      ResultString=getWordLemmatizedForm(ResultString,TestID)
     ResultString=stem(ResultString)
     ResultString
   }
@@ -78,7 +78,7 @@ class NLPTools(ApplicationContext:KpexContext) extends KpexClass(ApplicationCont
     var inputStringWords = inputString.split("\\s+").filterNot(_ == "")
     inputStringWords
   }
-  def addToLemmatizationMap(Sentences: String): Unit = {
+  def addToLemmatizationMap(Sentences: String,TestID:Int): Unit = {
 
     var theText=Sentences
     if (Sentences.length > 1 && !Sentences.substring(Sentences.length - 1, Sentences.length).equals(".")){
@@ -88,7 +88,11 @@ class NLPTools(ApplicationContext:KpexContext) extends KpexClass(ApplicationCont
     for (sentence <- sentences; token <- sentence.get(classOf[TokensAnnotation])) {
       var lemma = token.get(classOf[LemmaAnnotation])
       if (lemma.length > 0 && replaceExtraCharactersFromWord(lemma).trim.length>0){
-        appContext.LemmatizationMap=appContext.LemmatizationMap+(token.get(classOf[TextAnnotation]).toLowerCase.trim->lemma)
+        val MapItem=token.get(classOf[TextAnnotation]).toLowerCase.trim->lemma
+        if(appContext.LemmatizationMaps.keySet.contains(TestID))
+          appContext.LemmatizationMaps(TestID)=appContext.LemmatizationMaps(TestID)+MapItem
+        else
+          appContext.LemmatizationMaps=appContext.LemmatizationMaps+(TestID->scala.collection.mutable.Map(MapItem))
       }
 
     }
@@ -126,11 +130,11 @@ class NLPTools(ApplicationContext:KpexContext) extends KpexClass(ApplicationCont
     else
       Array()
   }
-  private def getWordLemmatizedForm(word:String): String =
+  private def getWordLemmatizedForm(word:String,TestID:Int): String =
   {
     val normalWord=word.toLowerCase.trim
-    if(appContext.LemmatizationMap.keySet.exists(_ .equals(normalWord)))
-      appContext.LemmatizationMap(normalWord)
+    if(appContext.LemmatizationMaps(TestID).keySet.exists(_ .equals(normalWord)))
+      appContext.LemmatizationMaps(TestID)(normalWord)
     else
       word
   }

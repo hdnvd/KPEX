@@ -9,6 +9,7 @@ class KpexConfig extends Serializable {
 
   val MEASURE_METHOD_EXACT=1
   val MEASURE_METHOD_APPROX=2
+  val TEST_SEPARATOR_TEXT="kpex"
 
 
   val HDFS_MODE = 1
@@ -26,14 +27,16 @@ class KpexConfig extends Serializable {
   var ResultDirectory = ""
   var PostProcessSimilarityInfluenceFactor = 0.3
   var SimilarityMinThreshold = 0.3
+//  var MinWordRate = 3
   var GraphImportanceMethod:Int = METHOD_CLOSENESS
   val WindowSize = 5
   var StorageType:Int = HDFS_MODE
-  var DatabaseTestID = 0
-  var DatabaseContextURL = "NoURL"
-  var DatabaseContextTitle = "NoTitle"
+  var DatabaseTestIDs:Seq[Int] = Seq()
+  var DatabaseTestIDsString:String = ""
+  var DatabaseContextURLs:Map[Int,String] = Map()
+  var DatabaseContextTitles:Map[Int,String] = Map()
   var HasSimilarityEdgeWeighting=true
-  var MeasurementMethod:Int=MEASURE_METHOD_EXACT
+  var MeasurementMethod:Int=MEASURE_METHOD_APPROX
 
 
   var ResultDirectoryName:String="result"
@@ -42,6 +45,7 @@ class KpexConfig extends Serializable {
   var VisualGraphPath:String  = DataSetDirectory + "/dataGraph.html"
   var DataSetPath :String = DataSetDirectory + "data.txt"
   var DataSetKeyWordsPath:String  = DataSetDirectory + "keywords.txt"
+  var DataSetFullResultPath:String  = DataSetDirectory + "keywords.txt"
   var DataSetRealKeyWordsPath:String  = DataSetDirectory + "realkeywords.txt"
   var IdentificationMapPath:String  = DataSetDirectory + "dataGraphIds.txt"
 }
