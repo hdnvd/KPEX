@@ -90,31 +90,40 @@ class KpexEngine extends KpexContext {
     }
     val SortedNPMap = NPMap.sortBy(f => f._2).reverse
     var KeyWordIndex = 1
+    var FoundKeyPhrases:Map[Int,String]=Map()
     SortedNPMap.foreach { np =>
       val TextLine = s"${KeyWordIndex}\t${np._1}\t${np._2}"
       KeyWordIndex += 1
-      if (KeyWordIndex <= AppConfig.ResultKeywordsCount + 1) {
+
         var Matched=false
         RealKeyPhrases(currentTestID).foreach { RealKeyPhrase =>
-          SweetOut.printLine("RK:"+RealKeyPhrase+" NP:"+np._1,2)
-          var SuccessfulHit=false
-          if(AppConfig.MeasurementMethod==AppConfig.MEASURE_METHOD_APPROX)
-            SuccessfulHit=np._1.trim.toLowerCase.contains(RealKeyPhrase.toLowerCase.trim) || nlp.removeSingleCharactersAndSeparateWithSpace(np._1.trim.toLowerCase).contains(nlp.removeSingleCharactersAndSeparateWithSpace(RealKeyPhrase.toLowerCase.trim))
-          else
-            SuccessfulHit=np._1.trim.toLowerCase.equals(RealKeyPhrase.toLowerCase.trim)
-          if (SuccessfulHit) {
-            algorithmRate += SortedNPMap.length - KeyWordIndex
-            TruePositivesCount = TruePositivesCount + 1
-            Matched=true
+          if(!Matched && !FoundKeyPhrases.values.exists(_.equals(RealKeyPhrases))){
+            SweetOut.printLine("RK:"+RealKeyPhrase+" NP:"+np._1,2)
+            var SuccessfulHit=false
+            if(AppConfig.MeasurementMethod==AppConfig.MEASURE_METHOD_APPROX)
+              SuccessfulHit=np._1.trim.toLowerCase.contains(RealKeyPhrase.toLowerCase.trim) || nlp.removeSingleCharactersAndSeparateWithSpace(np._1.trim.toLowerCase).contains(nlp.removeSingleCharactersAndSeparateWithSpace(RealKeyPhrase.toLowerCase.trim))
+            else
+              SuccessfulHit=np._1.trim.toLowerCase.equals(RealKeyPhrase.toLowerCase.trim)
+            if (SuccessfulHit) {
+              if(KeyWordIndex <= AppConfig.ResultKeywordsCount + 1){
+                algorithmRate += SortedNPMap.length - KeyWordIndex
+                TruePositivesCount = TruePositivesCount + 1
+              }
+              FoundKeyPhrases=FoundKeyPhrases+(KeyWordIndex->RealKeyPhrase)
+              Matched=true
+            }
           }
-
         }
-        if(Matched)
-          Result += "\n" + TextLine+"\t**"
-        else
-          Result += "\n" + TextLine
+        Result =Result+"\n"
+        if (KeyWordIndex >AppConfig.ResultKeywordsCount + 1)
+          Result =Result+"--"
 
-      }
+        if(Matched)
+          Result += TextLine+"\t**"
+        else
+          Result += TextLine
+
+
     }
 
     Result
