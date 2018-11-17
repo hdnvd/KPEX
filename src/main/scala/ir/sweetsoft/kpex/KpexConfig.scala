@@ -37,6 +37,7 @@ class KpexConfig extends Serializable {
   var DatabaseContextTitles:Map[Int,String] = Map()
   var HasSimilarityEdgeWeighting=true
   var MeasurementMethod:Int=MEASURE_METHOD_APPROX
+  var PosTaggedNounPhraseExtraction:Int=MEASURE_METHOD_APPROX
 
 
   var ResultDirectoryName:String="result"

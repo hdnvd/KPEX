@@ -21,7 +21,6 @@ class KpexEngine extends KpexContext {
       val allwords = np.split(" ").toSeq
       allwords
     })
-    var VarNouns = nouns
     VertexMap.foreach(VR => {
       //      val rate = VR._1
       val vertexName = NewIdentificationMap(VR._1)
@@ -60,6 +59,8 @@ class KpexEngine extends KpexContext {
       var rate = 0d
 
         var maxRateInPhrase=0d
+        var LastWordRate=0d
+        var PhraseRateVariance=0d
         words.foreach { word => //Single Word From NounPhrase
           val wordRate = SortedVertexMap.filter { p =>
             var vertexName = NewIdentificationMap(p._1)
@@ -78,13 +79,17 @@ class KpexEngine extends KpexContext {
               thisWordRate = wordRate.head._2 / DistanceSum
             else
               thisWordRate= wordRate.head._2
-
+            if(LastWordRate!=0)
+              PhraseRateVariance=PhraseRateVariance+math.pow(thisWordRate-LastWordRate,2)
+            LastWordRate=thisWordRate
             if(maxRateInPhrase<thisWordRate)
               maxRateInPhrase=thisWordRate
 
               rate = rate + thisWordRate
           }
+          rate=rate+LastWordRate
         }
+//        rate=rate-PhraseRateVariance
 //        rate=rate*maxRateInPhrase
         (np, rate)
     }
@@ -103,7 +108,7 @@ class KpexEngine extends KpexContext {
             if(AppConfig.MeasurementMethod==AppConfig.MEASURE_METHOD_APPROX)
               SuccessfulHit=np._1.trim.toLowerCase.contains(RealKeyPhrase.toLowerCase.trim) || nlp.removeSingleCharactersAndSeparateWithSpace(np._1.trim.toLowerCase).contains(nlp.removeSingleCharactersAndSeparateWithSpace(RealKeyPhrase.toLowerCase.trim))
             else
-              SuccessfulHit=np._1.trim.toLowerCase.equals(RealKeyPhrase.toLowerCase.trim)
+              SuccessfulHit=nlp.removeSingleCharactersAndSeparateWithSpace(np._1.trim.toLowerCase).equals(nlp.removeSingleCharactersAndSeparateWithSpace(RealKeyPhrase.toLowerCase.trim))
             if (SuccessfulHit) {
               if(KeyWordIndex <= AppConfig.ResultKeywordsCount + 1){
                 algorithmRate += SortedNPMap.length - KeyWordIndex
@@ -353,34 +358,5 @@ class KpexEngine extends KpexContext {
     AppConfig.DataSetKeyWordsPath = AppConfig.ResultDirectory + "/keywords" + TestID + ".txt"
   }
   protected def LoadArgs(spark: SparkSession, args: Array[String]): Unit = {
-//    if (args.length > 9) {
-//      if (args(2).toLowerCase.trim.equals("hdfs"))
-//        AppConfig.StorageType = AppConfig.HDFS_MODE
-//      else if (args(2).toLowerCase.trim.equals("mysql"))
-//        AppConfig.StorageType = AppConfig.MYSQL_MODE
-//      else
-//        AppConfig.StorageType = AppConfig.FILE_MODE
-//      if (args(3).toLowerCase.trim.equals("postag"))
-//        AppConfig.hasPosTagging = true
-//      else
-//        AppConfig.hasPosTagging = false
-//
-//      AppConfig.ResultKeywordsCount = args(4).toInt
-//      AppConfig.NounInfluence = args(5).toFloat
-//      AppConfig.NounOutInfluence = args(6).toFloat
-//      AppConfig.AdjectiveInfluence = args(7).toFloat
-//      AppConfig.AdjectiveOutInfluence = args(8).toFloat
-//
-//      AppConfig.DataSetDirectory = args(9)
-//    }
-//    var PostFix = ""
-//    if (!AppConfig.SingleOutput) {
-//      PostFix += "_" + AppConfig.GraphImportanceMethod
-//      if (AppConfig.hasPosTagging)
-//        PostFix += "_pos"
-//      PostFix += "_w" + AppConfig.WindowSize
-//    }
-//    AppConfig.ResultDirectoryName="result"+PostFix
-//    RealKeyPhrases = RealKeyPhrases+(0->spark.sparkContext.textFile(AppConfig.DataSetRealKeyWordsPath).collect)
   }
 }

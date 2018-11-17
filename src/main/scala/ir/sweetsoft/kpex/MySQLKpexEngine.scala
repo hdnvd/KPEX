@@ -17,7 +17,6 @@ class MySQLKpexEngine extends KpexEngine  {
   override protected def LoadArgs(spark: SparkSession, args: Array[String]): Unit = {
     if (args.length > 2) {
       AppConfig.DatabaseTestIDsString=args(2)
-//      AppConfig.DatabaseTestIDs = AppConfig.DatabaseTestIDsString.split(",").map(id=>id.toInt).toSeq
 
       var TestIDsInfo=AppConfig.DatabaseTestIDsString.split("-")
       var TestIDFrom=TestIDsInfo(0).toInt
@@ -43,7 +42,6 @@ class MySQLKpexEngine extends KpexEngine  {
       MysqlConfigs.put("user", "root")
       MysqlConfigs.put("password", "Persian1147%")
 
-//      SweetOut.printLine(AppConfig.DatabaseTestID)
       val sc = spark.sparkContext
       var input: RDD[String] = null
 
@@ -122,14 +120,8 @@ class MySQLKpexEngine extends KpexEngine  {
 
   private def LoadWordVectors(spark: SparkSession,TestID:Int): Unit =
   {
-    //      inputString.split(Array(' ','\n','.',',',':',';'))
     val nlp=new NLPTools(this)
     var inputStringWords = nlp.GetStringWords(inputString(TestID))
-//    SweetOut.printLine("Words Are:")
-//    inputStringWords.foreach(Word=>
-//    {
-//      SweetOut.printLine(Word)
-//    })
     var WordsVectorMap: Map[String, Array[Double]] = Map()
     var AllWords="'unknown'"
     inputStringWords=inputStringWords.distinct.map(word=>

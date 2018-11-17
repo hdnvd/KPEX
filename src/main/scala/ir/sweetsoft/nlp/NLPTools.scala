@@ -41,7 +41,7 @@ class NLPTools(ApplicationContext:KpexContext) extends KpexClass(ApplicationCont
   }
   def removeSingleCharactersAndSeparateWithSpace(InputString:String): String =
   {
-    val words=GetStringWords(InputString)
+    val words=GetStringWords(InputString.replace("'",""))
     var result=""
     words.foreach(word=>if(word.trim.length>1)
     {
@@ -75,7 +75,7 @@ class NLPTools(ApplicationContext:KpexContext) extends KpexClass(ApplicationCont
   }
   def GetStringWords(inputString:String): Seq[String] =
   {
-    var inputStringWords = inputString.split("\\s+").filterNot(_ == "")
+    var inputStringWords = inputString.split("\\s+|\\-+").filterNot(_ == "")
     inputStringWords
   }
   def addToLemmatizationMap(Sentences: String,TestID:Int): Unit = {
