@@ -54,41 +54,68 @@ class KpexEngine extends KpexContext {
     val NPMap = NounPhrases.map {
       np =>
 
+        val PosTagsString=NounPhrasePosTags(np)
         val nlp=new NLPTools(this)
         val words = nlp.GetStringWords(np) // Get Single Words Of This NounPhrase
+        val PosTags = nlp.GetStringWords(PosTagsString) // Get Single Words Of This NounPhrase
+
+//        SweetOut.printLine("NounPhrase IS:"+np,1)
+        SweetOut.printLine("POSTAGString IS:"+PosTags,1)
       var rate = 0d
 
         var maxRateInPhrase=0d
         var LastWordRate=0d
         var PhraseRateVariance=0d
-        words.foreach { word => //Single Word From NounPhrase
-          val wordRate = SortedVertexMap.filter { p =>
-            var vertexName = NewIdentificationMap(p._1)
-            vertexName = nlp.GetNormalizedAndLemmatizedWord(vertexName,currentTestID)
-            vertexName.trim.toLowerCase.equals(word.toLowerCase.trim)
-          }
-          var DistanceSum=0d
-          if (wordRate.nonEmpty) {
-            var vertexName = NewIdentificationMap(wordRate.head._1)
-//            DistanceSum=GetDistanceOfWordInPhrase(words,vertexName)
-            //            AverageSimilarity=1d
-            SweetOut.printLine("Sum Of Distance of " + vertexName + " In Phrase "+np+" Is " + DistanceSum,1)
+        var NounFound=false
+        if(words.nonEmpty)
+          {
+            for(i <- (words.length-1) to 0 by -1){
+              val word=words(i)
+              var posTag=""
+              if(PosTags.length>i)
+                posTag=PosTags(i)
+              var posTagFactor=1d
+              //          SweetOut.printLine("POSTAG IS:"+posTag,1)
 
-            var thisWordRate=0d
-            if(DistanceSum>0)
-              thisWordRate = wordRate.head._2 / DistanceSum
-            else
-              thisWordRate= wordRate.head._2
-            if(LastWordRate!=0)
-              PhraseRateVariance=PhraseRateVariance+math.pow(thisWordRate-LastWordRate,2)
-            LastWordRate=thisWordRate
-            if(maxRateInPhrase<thisWordRate)
-              maxRateInPhrase=thisWordRate
+              if(posTag.toUpperCase.trim.equals("NN") && !NounFound)
+              {
+                NounFound=true
+                posTagFactor=1.5
+              }
 
-              rate = rate + thisWordRate
+              //          else if(posTag.equals(""))
+              //            SweetOut.printLine("ERROR FOUNDING POSTAG",1)
+              //        words.foreach { word => //Single Word From NounPhrase
+              val wordRate = SortedVertexMap.filter { p =>
+                var vertexName = NewIdentificationMap(p._1)
+                vertexName = nlp.GetNormalizedAndLemmatizedWord(vertexName,currentTestID)
+                vertexName.trim.toLowerCase.equals(word.toLowerCase.trim)
+              }
+              var DistanceSum=0d
+              if (wordRate.nonEmpty) {
+                var vertexName = NewIdentificationMap(wordRate.head._1)
+                //            DistanceSum=GetDistanceOfWordInPhrase(words,vertexName)
+                //            AverageSimilarity=1d
+                SweetOut.printLine("Sum Of Distance of " + vertexName + " In Phrase "+np+" Is " + DistanceSum,1)
+
+                var thisWordRate=0d
+                if(DistanceSum>0)
+                  thisWordRate = wordRate.head._2 / DistanceSum
+                else
+                  thisWordRate= wordRate.head._2
+                if(LastWordRate!=0)
+                  PhraseRateVariance=PhraseRateVariance+math.pow(thisWordRate-LastWordRate,2)
+                LastWordRate=thisWordRate
+                if(maxRateInPhrase<thisWordRate)
+                  maxRateInPhrase=thisWordRate
+                rate = rate + posTagFactor * thisWordRate
+              }
+
+              //          rate=rate+LastWordRate
+
+            }
           }
-          rate=rate+LastWordRate
-        }
+
 //        rate=rate-PhraseRateVariance
 //        rate=rate*maxRateInPhrase
         (np, rate)

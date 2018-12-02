@@ -4,8 +4,9 @@ import ir.sweetsoft.WordEmbedding.WordEmbed
 
 class KpexContext extends Serializable{
    var NounPhrases: Seq[String] = Seq()
+   var NounPhrasePosTags: Map[String,String] = Map()
    var AllNounPhrases: Map[Int,Seq[String]] = Map()
-   var AllNounPhrasePosTags: Map[Int,Seq[String]] = Map()
+   var AllNounPhrasePosTags: Map[Int,Map[String,String]] = Map()
    var WordFrequencies: Map[String,Int] = Map()
    var NewIdentificationMap: Map[Long, String] = Map()
    var MysqlConfigs: java.util.Properties = null

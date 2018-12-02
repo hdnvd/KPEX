@@ -4,7 +4,7 @@ import java.util.Properties
 
 import ir.sweetsoft.WordEmbedding.WordEmbed
 import ir.sweetsoft.common.SweetOut
-import ir.sweetsoft.nlp.{NLPTools, textBlobAdapter}
+import ir.sweetsoft.nlp.{NLPTools, nltkAdapter}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.SparkSession
 
@@ -110,9 +110,11 @@ class MySQLKpexEngine extends KpexEngine  {
           RealKeyPhrases=RealKeyPhrases+(TestID->theRealKeyPhrases)
           LoadWordVectors(spark,TestID)
         })
-
       TotalInputString=TotalInputString+"\r\n"+AppConfig.TEST_SEPARATOR_TEXT+"\r\n"
-      AllNounPhrases=new textBlobAdapter(this).GetTotalNounPhrases(spark,TotalInputString)
+//      val AllNounPhrasesData=new textBlobAdapter(this).GetTotalNounPhrases(spark,TotalInputString)
+      val AllNounPhrasesData=new nltkAdapter(this).GetTotalNounPhrases(spark,TotalInputString)
+//      AllNounPhrases=AllNounPhrasesData.head
+      AllNounPhrasePosTags=AllNounPhrasesData
       AppConfig.SingleOutput = true
 
     }

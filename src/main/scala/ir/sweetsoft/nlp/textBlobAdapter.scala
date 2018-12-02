@@ -43,7 +43,7 @@ class textBlobAdapter(ApplicationContext:KpexContext) extends KpexClass(Applicat
 //    SweetOut.printLine("Loading Noun Phrases Completed",1)
 //    NounPhrases
 //  }
-  def GetTotalNounPhrases(spark: SparkSession,TotalInputString: String) : Map[Int,Seq[String]] = {
+  def GetTotalNounPhrases(spark: SparkSession,TotalInputString: String) : Map[Int,Map[String,String]] = {
     SweetOut.printLine("Loading Noun Phrases...",1)
     SweetOut.printLine(TotalInputString,1)
 
@@ -56,7 +56,8 @@ class textBlobAdapter(ApplicationContext:KpexContext) extends KpexClass(Applicat
 //    NounPhrases=NounPhrases.distinct
     var ProcessedNPs: Seq[String] = Seq()
     var TestID = -1
-    var AllNounPhrases: Map[Int,Seq[String]] = Map()
+//    var AllNounPhrases: Map[Int,Seq[String]] = Map()
+    var AllNounPhrasePosTags: Map[Int,Map[String,String]] = Map()
   var TestIndex=0
     TotalNounPhrases.foreach {
       np =>
@@ -67,7 +68,18 @@ class textBlobAdapter(ApplicationContext:KpexContext) extends KpexClass(Applicat
             if(TestID>0)
               {
                 SweetOut.printLine("TestID Is "+TestID,1)
-                AllNounPhrases=AllNounPhrases+(TestID->ProcessedNPs.distinct)
+                val DistinctProcessedNPs=ProcessedNPs.distinct
+                var NpPosTags:Map[String,String]=Map()
+                DistinctProcessedNPs.foreach(np=>
+                  {
+                    val npWords=np.split("\\s")
+                    var PosTags=""
+                    npWords.foreach(word=>{PosTags=PosTags+" "+"NN"})
+                    NpPosTags=NpPosTags+(np.trim->PosTags.trim)
+                  }
+                )
+//                AllNounPhrases=AllNounPhrases+(TestID->DistinctProcessedNPs)
+                AllNounPhrasePosTags=AllNounPhrasePosTags+(TestID->NpPosTags)
                 ProcessedNPs=Seq()
               }
             if(TestIndex<ApplicationContext.AppConfig.DatabaseTestIDs.length)
@@ -101,6 +113,6 @@ class textBlobAdapter(ApplicationContext:KpexContext) extends KpexClass(Applicat
     }
 //    NounPhrases = ProcessedNPs.distinct
     SweetOut.printLine("Loading Noun Phrases Completed",1)
-    AllNounPhrases
+    AllNounPhrasePosTags
   }
 }

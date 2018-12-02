@@ -26,7 +26,8 @@ object KpexApp extends MySQLKpexEngine {
       val theGraphIO:GraphIO=new GraphIO(this)
       val theIO:IO=new IO(this)
 //      NounPhrases=new textBlobAdapter(this).GetNounPhrases(spark,inputString,currentTestID)
-      NounPhrases=AllNounPhrases(currentTestID)
+      NounPhrasePosTags=AllNounPhrasePosTags(currentTestID)
+      NounPhrases=NounPhrasePosTags.keySet.toSeq
       //    RemoveExtraWordsFromNounPhrasesBySimilarity()
       theGraphIO.makeWordGraphFile(spark,inputString)
       val file = spark.sparkContext.textFile(AppConfig.GraphPath)
