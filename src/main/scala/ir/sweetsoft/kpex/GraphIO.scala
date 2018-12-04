@@ -139,6 +139,7 @@ class GraphIO(ApplicationContext:KpexContext) extends KpexClass(ApplicationConte
   def LoadGraph(spark: SparkSession,file:RDD[String],wordEmbed: WordEmbed): Graph[Int,Double] =
   {
     var ValueIndex=2
+//    var flag=true// Just For Test
     var edgesRDD: RDD[Edge[Double]] = file.map(line => line.split("\t"))
       .flatMap {
         case line: Array[String] =>
@@ -152,7 +153,8 @@ class GraphIO(ApplicationContext:KpexContext) extends KpexClass(ApplicationConte
           val CoOccurance=line(ValueIndex).toDouble
           val FirstWordFrequency=appContext.WordFrequencies(FirstWord)
           val SecondWordFrequency=appContext.WordFrequencies(SecondWord)
-          if(Nouns.contains(FirstWord)){
+          if(appContext.NounPhrases.exists(phrase=>phrase.contains(FirstWord))){
+            SweetOut.printLine("Found A Phrase",1)
             OutInfluence=appContext.AppConfig.NounOutInfluence
             role=1
           }
@@ -160,7 +162,8 @@ class GraphIO(ApplicationContext:KpexContext) extends KpexClass(ApplicationConte
             OutInfluence=appContext.AppConfig.AdjectiveOutInfluence
             role=2
           }
-          if(Nouns.contains(SecondWord)){
+          if(appContext.NounPhrases.exists(phrase=>phrase.contains(SecondWord))){
+            SweetOut.printLine("Found A Phrase",1)
             Influence=appContext.AppConfig.NounInfluence
             role=1
           }
@@ -183,12 +186,19 @@ class GraphIO(ApplicationContext:KpexContext) extends KpexClass(ApplicationConte
                 }
 
             }
+//          if(flag)
+//            {
+//              SimilarityInfluence=100
+//              flag = !flag
+//            }
+
           val DiceResult=Dice(FirstWordFrequency,SecondWordFrequency,CoOccurance)
           appContext.NewIdentificationMap=appContext.NewIdentificationMap+(MurmurHash3.stringHash(FirstWord).toLong->FirstWord)
           appContext.NewIdentificationMap=appContext.NewIdentificationMap+(MurmurHash3.stringHash(SecondWord).toLong->SecondWord)
           var StraightWeight:Double=0.0d
           var ReverseWeight:Double=0.0d
           SweetOut.printLine("SimilarityInfluence is "+SimilarityInfluence,1)
+          SweetOut.printLine("Influence is "+Influence,1)
           if(appContext.AppConfig.GraphImportanceMethod==appContext.AppConfig.METHOD_NE_RANK)
             {
               StraightWeight=(OutInfluence*100*DiceResult)*SimilarityInfluence
