@@ -69,6 +69,7 @@ class KpexEngine extends KpexContext {
         var NounFound=false
         if(words.nonEmpty)
           {
+            val NounPhraseHead=words.last
             for(i <- (words.length-1) to 0 by -1){
               val word=words(i)
               var posTag=""
@@ -79,8 +80,9 @@ class KpexEngine extends KpexContext {
 
               if(posTag.toUpperCase.trim.equals("NN") && !NounFound)
               {
+                SweetOut.printLine("Head Of the Phrase "+np+" is: "+word,1)
                 NounFound=true
-                posTagFactor=1.5
+                posTagFactor=1.0
               }
 
               //          else if(posTag.equals(""))
@@ -103,6 +105,8 @@ class KpexEngine extends KpexContext {
                   thisWordRate = wordRate.head._2 / DistanceSum
                 else
                   thisWordRate= wordRate.head._2
+                val DistanceFromNounPhraseHead = wordEmbeds(currentTestID).getSimilarityBetweenWords(word, NounPhraseHead)
+                thisWordRate=thisWordRate+thisWordRate/DistanceFromNounPhraseHead
                 if(LastWordRate!=0)
                   PhraseRateVariance=PhraseRateVariance+math.pow(thisWordRate-LastWordRate,2)
                 LastWordRate=thisWordRate
