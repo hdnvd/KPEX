@@ -70,7 +70,8 @@ class KpexEngine extends KpexContext {
         if(words.nonEmpty)
           {
             val NounPhraseHead=words.last
-            for(i <- (words.length-1) to 0 by -1){
+            val NounPhraseLength=words.length
+            for(i <- (NounPhraseLength-1) to 0 by -1){
               val word=words(i)
               var posTag=""
               if(PosTags.length>i)
@@ -105,8 +106,25 @@ class KpexEngine extends KpexContext {
                   thisWordRate = wordRate.head._2 / DistanceSum
                 else
                   thisWordRate= wordRate.head._2
-                val DistanceFromNounPhraseHead = wordEmbeds(currentTestID).getSimilarityBetweenWords(word, NounPhraseHead)
-                thisWordRate=thisWordRate+thisWordRate/DistanceFromNounPhraseHead
+                var DistanceFromNounPhraseHead = wordEmbeds(currentTestID).getSimilarityBetweenWords(word, NounPhraseHead)
+                DistanceFromNounPhraseHead=math.pow(DistanceFromNounPhraseHead,2)
+//                if(DistanceFromNounPhraseHead>6)
+//                  SweetOut.printLine("Distance6FromNounPhraseHead is " + DistanceFromNounPhraseHead ,1)
+//                else if(DistanceFromNounPhraseHead>5)
+//                  SweetOut.printLine("Distance5FromNounPhraseHead is " + DistanceFromNounPhraseHead ,1)
+//                else if(DistanceFromNounPhraseHead>3)
+//                  SweetOut.printLine("Distance3FromNounPhraseHead is " + DistanceFromNounPhraseHead ,1)
+//                else if(DistanceFromNounPhraseHead>2)
+//                  SweetOut.printLine("Distance2FromNounPhraseHead is " + DistanceFromNounPhraseHead ,1)
+//                else if(DistanceFromNounPhraseHead>1)
+//                  SweetOut.printLine("Distance1FromNounPhraseHead is " + DistanceFromNounPhraseHead ,1)
+//                else if(DistanceFromNounPhraseHead>0)
+//                  SweetOut.printLine("Distance0FromNounPhraseHead is " + DistanceFromNounPhraseHead ,1)
+//                else
+//                  SweetOut.printLine("DistanceFromNounPhraseHead is " + DistanceFromNounPhraseHead ,1)
+
+
+                thisWordRate=thisWordRate+thisWordRate*DistanceFromNounPhraseHead
                 if(LastWordRate!=0)
                   PhraseRateVariance=PhraseRateVariance+math.pow(thisWordRate-LastWordRate,2)
                 LastWordRate=thisWordRate
