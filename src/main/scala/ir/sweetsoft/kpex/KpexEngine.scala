@@ -14,7 +14,8 @@ import org.apache.spark.sql.SparkSession
 @SerialVersionUID(1145L)
 class KpexEngine extends KpexContext {
 
-  protected var currentTestID:Int=0
+  protected var currentTestID: Int = 0
+
   private def ReRateWordsBySimilarities(VertexMap: Seq[(Long, Double)]): Seq[(Long, Double)] = {
     var theVertexMap = VertexMap
     val nouns = NounPhrases.flatMap(np => {
@@ -32,9 +33,9 @@ class KpexEngine extends KpexContext {
             val vertexName2 = NewIdentificationMap(SecondVR._1)
             if (nouns.contains(vertexName2) && vertexName2.length > 1) {
               var similarity = wordEmbeds(currentTestID).getSimilarityBetweenWords(vertexName, vertexName2)
-              SweetOut.printLine("Similarity Between " + vertexName + " and " + vertexName2 + " is " + similarity,1)
-              if (similarity > AppConfig.SimilarityMinThreshold && similarity < 2 && similarity != -2d && similarity!=Double.NaN) {
-                SweetOut.printLine("PostProcessSimilarityInfluenceFactor is "+AppConfig.PostProcessSimilarityInfluenceFactor,1)
+              SweetOut.printLine("Similarity Between " + vertexName + " and " + vertexName2 + " is " + similarity, 1)
+              if (similarity > AppConfig.SimilarityMinThreshold && similarity < 2 && similarity != -2d && similarity != Double.NaN) {
+                SweetOut.printLine("PostProcessSimilarityInfluenceFactor is " + AppConfig.PostProcessSimilarityInfluenceFactor, 1)
                 Result = (SecondVR._1, SecondVR._2 + (VR._2 * similarity * AppConfig.PostProcessSimilarityInfluenceFactor))
               }
             }
@@ -48,171 +49,209 @@ class KpexEngine extends KpexContext {
     theVertexMap
   }
 
+  private def ReRateWordsByBeingInNounPhrases(VertexMap: Seq[(Long, Double)]): Seq[(Long, Double)] = {
+    var theVertexMap = VertexMap
+    val nouns = NounPhrases.flatMap(np => {
+      val allwords = np.split(" ").toSeq
+      allwords
+    })
+
+    var NounContainingPhrasesCountMap: Map[String, Int] = Map()
+    nouns.foreach(noun => {
+      var ContainingNounPhrasesCount = 0
+      NounPhrases.foreach(NounPhrase => {
+        val ThisPhraseWords = NounPhrase.split(" ").toSeq
+        var Found = false
+        ThisPhraseWords.foreach(word => {
+          if (word.equals(noun))
+            Found = true
+        })
+        if (Found)
+          ContainingNounPhrasesCount = ContainingNounPhrasesCount + 1
+      })
+      NounContainingPhrasesCountMap = NounContainingPhrasesCountMap + (noun -> ContainingNounPhrasesCount)
+    })
+    theVertexMap = theVertexMap.map(WordCode => {
+      val Word = NewIdentificationMap(WordCode._1)
+
+      var ContainingNounPhrasesCount = 1
+      if (NounContainingPhrasesCountMap.keys.exists(key => key == Word))
+        ContainingNounPhrasesCount = ContainingNounPhrasesCount + NounContainingPhrasesCountMap(Word)
+      val Result = (WordCode._1, WordCode._2 * ContainingNounPhrasesCount / NounPhrases.length + 1)
+      Result
+    })
+
+    theVertexMap
+
+  }
+
   private def CalculateAndGetNounPhrasesRateByWordsRate(SortedVertexMap: Seq[(Long, Double)]): String = {
-    val nlp=new NLPTools(this)
+    val nlp = new NLPTools(this)
     var Result = ""
     val NPMap = NounPhrases.map {
       np =>
 
-        val PosTagsString=NounPhrasePosTags(np)
-        val nlp=new NLPTools(this)
+        val PosTagsString = NounPhrasePosTags(np)
+        val nlp = new NLPTools(this)
         val words = nlp.GetStringWords(np) // Get Single Words Of This NounPhrase
-        val PosTags = nlp.GetStringWords(PosTagsString) // Get Single Words Of This NounPhrase
+      val PosTags = nlp.GetStringWords(PosTagsString) // Get Single Words Of This NounPhrase
 
-//        SweetOut.printLine("NounPhrase IS:"+np,1)
-        SweetOut.printLine("POSTAGString IS:"+PosTags,1)
-      var rate = 0d
+        //        SweetOut.printLine("NounPhrase IS:"+np,1)
+        SweetOut.printLine("POSTAGString IS:" + PosTags, 1)
+        var rate = 0d
 
-        var maxRateInPhrase=0d
-        var LastWordRate=0d
-        var PhraseRateVariance=0d
-        var NounFound=false
-        if(words.nonEmpty)
-          {
-            val NounPhraseHead=words.last
-            val NounPhraseLength=words.length
-            for(i <- (NounPhraseLength-1) to 0 by -1){
-              val word=words(i)
-              var posTag=""
-              if(PosTags.length>i)
-                posTag=PosTags(i)
-              var posTagFactor=1d
-              //          SweetOut.printLine("POSTAG IS:"+posTag,1)
+        var maxRateInPhrase = 0d
+        var LastWordRate = 0d
+        var PhraseRateVariance = 0d
+        var NounFound = false
+        if (words.nonEmpty) {
+          val NounPhraseHead = words.last
+          val NounPhraseLength = words.length
+          for (i <- (NounPhraseLength - 1) to 0 by -1) {
+            val word = words(i)
+            var posTag = ""
+            if (PosTags.length > i)
+              posTag = PosTags(i)
+            var posTagFactor = 1d
+            //          SweetOut.printLine("POSTAG IS:"+posTag,1)
 
-              if(posTag.toUpperCase.trim.equals("NN") && !NounFound)
-              {
-                SweetOut.printLine("Head Of the Phrase "+np+" is: "+word,1)
-                NounFound=true
-                posTagFactor=1.0
-              }
-
-              //          else if(posTag.equals(""))
-              //            SweetOut.printLine("ERROR FOUNDING POSTAG",1)
-              //        words.foreach { word => //Single Word From NounPhrase
-              val wordRate = SortedVertexMap.filter { p =>
-                var vertexName = NewIdentificationMap(p._1)
-                vertexName = nlp.GetNormalizedAndLemmatizedWord(vertexName,currentTestID)
-                vertexName.trim.toLowerCase.equals(word.toLowerCase.trim)
-              }
-              var DistanceSum=0d
-              if (wordRate.nonEmpty) {
-                var vertexName = NewIdentificationMap(wordRate.head._1)
-                //            DistanceSum=GetDistanceOfWordInPhrase(words,vertexName)
-                //            AverageSimilarity=1d
-                SweetOut.printLine("Sum Of Distance of " + vertexName + " In Phrase "+np+" Is " + DistanceSum,1)
-
-                var thisWordRate=0d
-                if(DistanceSum>0)
-                  thisWordRate = wordRate.head._2 / DistanceSum
-                else
-                  thisWordRate= wordRate.head._2
-                var DistanceFromNounPhraseHead = wordEmbeds(currentTestID).getSimilarityBetweenWords(word, NounPhraseHead)
-                DistanceFromNounPhraseHead=math.pow(DistanceFromNounPhraseHead,2)
-//                if(DistanceFromNounPhraseHead>6)
-//                  SweetOut.printLine("Distance6FromNounPhraseHead is " + DistanceFromNounPhraseHead ,1)
-//                else if(DistanceFromNounPhraseHead>5)
-//                  SweetOut.printLine("Distance5FromNounPhraseHead is " + DistanceFromNounPhraseHead ,1)
-//                else if(DistanceFromNounPhraseHead>3)
-//                  SweetOut.printLine("Distance3FromNounPhraseHead is " + DistanceFromNounPhraseHead ,1)
-//                else if(DistanceFromNounPhraseHead>2)
-//                  SweetOut.printLine("Distance2FromNounPhraseHead is " + DistanceFromNounPhraseHead ,1)
-//                else if(DistanceFromNounPhraseHead>1)
-//                  SweetOut.printLine("Distance1FromNounPhraseHead is " + DistanceFromNounPhraseHead ,1)
-//                else if(DistanceFromNounPhraseHead>0)
-//                  SweetOut.printLine("Distance0FromNounPhraseHead is " + DistanceFromNounPhraseHead ,1)
-//                else
-//                  SweetOut.printLine("DistanceFromNounPhraseHead is " + DistanceFromNounPhraseHead ,1)
-
-
-                thisWordRate=thisWordRate+thisWordRate*DistanceFromNounPhraseHead
-                if(LastWordRate!=0)
-                  PhraseRateVariance=PhraseRateVariance+math.pow(thisWordRate-LastWordRate,2)
-                LastWordRate=thisWordRate
-                if(maxRateInPhrase<thisWordRate)
-                  maxRateInPhrase=thisWordRate
-                rate = rate + posTagFactor * thisWordRate
-              }
-
-              //          rate=rate+LastWordRate
-
+            if (posTag.toUpperCase.trim.equals("NN") && !NounFound) {
+              SweetOut.printLine("Head Of the Phrase " + np + " is: " + word, 1)
+              NounFound = true
+              posTagFactor = 1.0
             }
+
+            //          else if(posTag.equals(""))
+            //            SweetOut.printLine("ERROR FOUNDING POSTAG",1)
+            //        words.foreach { word => //Single Word From NounPhrase
+            val wordRate = SortedVertexMap.filter { p =>
+              var vertexName = NewIdentificationMap(p._1)
+              vertexName = nlp.GetNormalizedAndLemmatizedWord(vertexName, currentTestID)
+              vertexName.trim.toLowerCase.equals(word.toLowerCase.trim)
+            }
+            var DistanceSum = 0d
+            if (wordRate.nonEmpty) {
+              var vertexName = NewIdentificationMap(wordRate.head._1)
+              //            DistanceSum=GetDistanceOfWordInPhrase(words,vertexName)
+              //            AverageSimilarity=1d
+              SweetOut.printLine("Sum Of Distance of " + vertexName + " In Phrase " + np + " Is " + DistanceSum, 1)
+
+              var thisWordRate = 0d
+              if (DistanceSum > 0)
+                thisWordRate = wordRate.head._2 / DistanceSum
+              else
+                thisWordRate = wordRate.head._2
+              var DistanceFromNounPhraseHead = wordEmbeds(currentTestID).getSimilarityBetweenWords(word, NounPhraseHead)
+              DistanceFromNounPhraseHead = math.pow(DistanceFromNounPhraseHead, 2)
+//              thisWordRate = thisWordRate + thisWordRate * DistanceFromNounPhraseHead
+              if (LastWordRate != 0)
+                PhraseRateVariance = PhraseRateVariance + math.pow(thisWordRate - LastWordRate, 2)
+              LastWordRate = thisWordRate
+              if (maxRateInPhrase < thisWordRate)
+                maxRateInPhrase = thisWordRate
+              rate = rate + posTagFactor * thisWordRate
+            }
+
+            //          rate=rate+LastWordRate
+
           }
 
-//        rate=rate-PhraseRateVariance
-//        rate=rate*maxRateInPhrase
+          //            rate=rate/NounPhraseLength//Making Average
+        }
+
+        //        rate=rate-PhraseRateVariance
+        //        rate=rate*maxRateInPhrase
         (np, rate)
     }
     val SortedNPMap = NPMap.sortBy(f => f._2).reverse
     var KeyWordIndex = 1
-    var FoundKeyPhrases:Map[Int,String]=Map()
+    var ExactFoundKeyPhrases: Map[Int, String] = Map()
+    var ApproxFoundKeyPhrases: Map[Int, String] = Map()
     SortedNPMap.foreach { np =>
       val TextLine = s"${KeyWordIndex}\t${np._1}\t${np._2}"
       KeyWordIndex += 1
 
-        var Matched=false
-        RealKeyPhrases(currentTestID).foreach { RealKeyPhrase =>
-          if(!Matched && !FoundKeyPhrases.values.exists(_.equals(RealKeyPhrases))){
-            SweetOut.printLine("RK:"+RealKeyPhrase+" NP:"+np._1,2)
-            var SuccessfulHit=false
-            if(AppConfig.MeasurementMethod==AppConfig.MEASURE_METHOD_APPROX)
-              SuccessfulHit=np._1.trim.toLowerCase.contains(RealKeyPhrase.toLowerCase.trim) || nlp.removeSingleCharactersAndSeparateWithSpace(np._1.trim.toLowerCase).contains(nlp.removeSingleCharactersAndSeparateWithSpace(RealKeyPhrase.toLowerCase.trim))
-            else
-              SuccessfulHit=nlp.removeSingleCharactersAndSeparateWithSpace(np._1.trim.toLowerCase).equals(nlp.removeSingleCharactersAndSeparateWithSpace(RealKeyPhrase.toLowerCase.trim))
-            if (SuccessfulHit) {
-              if(KeyWordIndex <= AppConfig.ResultKeywordsCount + 1){
-                algorithmRate += SortedNPMap.length - KeyWordIndex
-                TruePositivesCount = TruePositivesCount + 1
+      var Approx_Matched = false
+      var Exact_Matched = false
+      RealKeyPhrases(currentTestID).foreach { RealKeyPhrase =>
+
+          SweetOut.printLine("RK:" + RealKeyPhrase + " NP:" + np._1, 2)
+          var APProxSuccessfulHit = false
+          var ExactSuccessfulHit = false
+          APProxSuccessfulHit = np._1.trim.toLowerCase.contains(RealKeyPhrase.toLowerCase.trim) || nlp.removeSingleCharactersAndSeparateWithSpace(np._1.trim.toLowerCase).contains(nlp.removeSingleCharactersAndSeparateWithSpace(RealKeyPhrase.toLowerCase.trim))
+          ExactSuccessfulHit = nlp.removeSingleCharactersAndSeparateWithSpace(np._1.trim.toLowerCase).equals(nlp.removeSingleCharactersAndSeparateWithSpace(RealKeyPhrase.toLowerCase.trim))
+          if (!Exact_Matched && !ExactFoundKeyPhrases.values.exists(_.equals(RealKeyPhrases)))
+            {
+              if (ExactSuccessfulHit) {
+                if (KeyWordIndex <= AppConfig.ResultKeywordsCount + 1) {
+                  Exact_AlgorithmRate += SortedNPMap.length - KeyWordIndex
+                  Exact_TruePositivesCount = Exact_TruePositivesCount + 1
+                }
+                ExactFoundKeyPhrases = ExactFoundKeyPhrases + (KeyWordIndex -> RealKeyPhrase)
+                Exact_Matched = true
               }
-              FoundKeyPhrases=FoundKeyPhrases+(KeyWordIndex->RealKeyPhrase)
-              Matched=true
+            }
+        if (!Approx_Matched && !ApproxFoundKeyPhrases.values.exists(_.equals(RealKeyPhrases)))
+          {
+            if (APProxSuccessfulHit) {
+              if (KeyWordIndex <= AppConfig.ResultKeywordsCount + 1) {
+                Approx_AlgorithmRate += SortedNPMap.length - KeyWordIndex
+                Approx_TruePositivesCount = Approx_TruePositivesCount + 1
+              }
+              ApproxFoundKeyPhrases = ApproxFoundKeyPhrases + (KeyWordIndex -> RealKeyPhrase)
+              Approx_Matched = true
             }
           }
-        }
-        Result =Result+"\n"
-        if (KeyWordIndex >AppConfig.ResultKeywordsCount + 1)
-          Result =Result+"--"
 
-        if(Matched)
-          Result += TextLine+"\t**"
-        else
-          Result += TextLine
+
+      }
+      Result = Result + "\n"
+      if (KeyWordIndex > AppConfig.ResultKeywordsCount + 1)
+        Result = Result + "--"
+
+      if (Exact_Matched)
+        Result += TextLine + "\t*"
+      else if (Approx_Matched)
+        Result += TextLine + "\t**"
+      else
+        Result += TextLine
 
 
     }
 
     Result
   }
-  protected def GetDistanceOfWordInPhrase(PhraseWords:Seq[String], theWord:String): Double = {
-          var DistanceSum:Double = 0d
-          var AverageDistance:Double = 0d
-          var validWordCount=0
-    var InvalidWordCount=0
-          PhraseWords.foreach(SecondaryWord => {
-            if (!theWord.equals(SecondaryWord)) {
-              val Distance = wordEmbeds(currentTestID).getEuclideanDistanceBetweenWords(theWord, SecondaryWord)
-              if (Distance != Double.NaN && Distance>0)
-                {
-                  DistanceSum = DistanceSum + Distance
-                  validWordCount=validWordCount+1
-                }
-              else
-                {
-                  InvalidWordCount=InvalidWordCount+1
-                  DistanceSum = DistanceSum + 1
-                }
 
-            }
-          })
-    if(validWordCount+InvalidWordCount>0)
-      AverageDistance=DistanceSum/Math.pow(validWordCount+InvalidWordCount,2)
+  protected def GetDistanceOfWordInPhrase(PhraseWords: Seq[String], theWord: String): Double = {
+    var DistanceSum: Double = 0d
+    var AverageDistance: Double = 0d
+    var validWordCount = 0
+    var InvalidWordCount = 0
+    PhraseWords.foreach(SecondaryWord => {
+      if (!theWord.equals(SecondaryWord)) {
+        val Distance = wordEmbeds(currentTestID).getEuclideanDistanceBetweenWords(theWord, SecondaryWord)
+        if (Distance != Double.NaN && Distance > 0) {
+          DistanceSum = DistanceSum + Distance
+          validWordCount = validWordCount + 1
+        }
+        else {
+          InvalidWordCount = InvalidWordCount + 1
+          DistanceSum = DistanceSum + 1
+        }
+
+      }
+    })
+    if (validWordCount + InvalidWordCount > 0)
+      AverageDistance = DistanceSum / Math.pow(validWordCount + InvalidWordCount, 2)
     AverageDistance
   }
+
   protected def RemoveExtraWordsFromNounPhrasesBySimilarity(): Unit = {
     NounPhrases = NounPhrases.flatMap(Phrase => {
 
-      val nlp=new NLPTools(this)
+      val nlp = new NLPTools(this)
       var PhraseWords: Seq[String] = nlp.GetStringWords(Phrase)
-      PhraseWords.map(Word => nlp.GetNormalizedAndLemmatizedWord(Word,currentTestID))
+      PhraseWords.map(Word => nlp.GetNormalizedAndLemmatizedWord(Word, currentTestID))
       if (PhraseWords.length <= 2)
         Seq(Phrase)
       else {
@@ -227,7 +266,7 @@ class KpexEngine extends KpexContext {
             }
           })
           AverageSimilarity = SimilaritySum / (PhraseWords.length - 1)
-          SweetOut.printLine("Average Of Similarity of " + Word + " In Phrase " + Phrase + " Is " + AverageSimilarity + " With Sum " + SimilaritySum,1)
+          SweetOut.printLine("Average Of Similarity of " + Word + " In Phrase " + Phrase + " Is " + AverageSimilarity + " With Sum " + SimilaritySum, 1)
           if (AverageSimilarity > 1)
             Seq(Word)
           else
@@ -271,32 +310,53 @@ class KpexEngine extends KpexContext {
   }
 
   def PrepareLocalOutputData(spark: SparkSession, VertexMap: Seq[(Long, Double)], file: RDD[String]): Unit = {
-    var vmap: Seq[(Long, Double)] = ReRateWordsBySimilarities(VertexMap)
+    var vmap: Seq[(Long, Double)] = VertexMap
+    vmap = ReRateWordsBySimilarities(vmap)
+    vmap = ReRateWordsByBeingInNounPhrases(vmap)
     val SortedVertexMap = vmap.sortBy(-_._2)
     var Result = ""
     Result = Result + CalculateAndGetAllWordsRate(SortedVertexMap, RealKeyPhrases(currentTestID))
-    Result = "\r\n**\t****************************************\t**"+ Result
-    Result = "\r\n**\t****************************************\t**"+ Result
-    Result = "\r\n**\t****************************************\t**"+ Result
-    Result = CalculateAndGetNounPhrasesRateByWordsRate(SortedVertexMap)+ Result
-    algorithmRate = algorithmRate / AppConfig.ResultKeywordsCount
-    algorithmRate = algorithmRate / RealKeyPhrases(currentTestID).length
-    val RateInt = (algorithmRate * 10000000).toInt
+    Result = "\r\n**\t****************************************\t**" + Result
+    Result = "\r\n**\t****************************************\t**" + Result
+    Result = "\r\n**\t****************************************\t**" + Result
+    Result = CalculateAndGetNounPhrasesRateByWordsRate(SortedVertexMap) + Result
+    Exact_AlgorithmRate = Exact_AlgorithmRate / AppConfig.ResultKeywordsCount
+    Exact_AlgorithmRate = Exact_AlgorithmRate / RealKeyPhrases(currentTestID).length
+    val ExactRateInt = (Exact_AlgorithmRate * 10000000).toInt
 
-    val ExtractedKeyphrasesCount=Math.min(NounPhrases.length,AppConfig.ResultKeywordsCount)
-    val RealKeyphrasesCount=RealKeyPhrases(currentTestID).length
-    TotalTruePositivesCount=TotalTruePositivesCount+TruePositivesCount
-    TotalRealKeyphrasesCount=TotalRealKeyphrasesCount+RealKeyphrasesCount
-    TotalExtractedKeyphrasesCount=TotalExtractedKeyphrasesCount+ExtractedKeyphrasesCount
-//    if(NounPhrases.length>AppConfig.ResultKeywordsCount)
-//      SweetOut.printLine("NounPhrases Length Are More Than ResultKeywordsCount"+NounPhrases.length+"/"+AppConfig.ResultKeywordsCount,4)
-    val Precision:Double=    TruePositivesCount /ExtractedKeyphrasesCount
-    val Recall:Double=    TruePositivesCount / RealKeyphrasesCount
-    var FScore:Double=0d
-    if(Precision+Recall>0)
-      FScore=2*Precision*Recall/(Precision+Recall)
+    Approx_AlgorithmRate = Approx_AlgorithmRate / AppConfig.ResultKeywordsCount
+    Approx_AlgorithmRate = Approx_AlgorithmRate / RealKeyPhrases(currentTestID).length
+    val ApproxRateInt = (Approx_AlgorithmRate * 10000000).toInt
+
+    val ExtractedKeyphrasesCount = Math.min(NounPhrases.length, AppConfig.ResultKeywordsCount)
+    val RealKeyphrasesCount = RealKeyPhrases(currentTestID).length
+    TotalExactTruePositivesCount = TotalExactTruePositivesCount + Exact_TruePositivesCount
+    TotalApproxTruePositivesCount = TotalApproxTruePositivesCount + Approx_TruePositivesCount
+    TotalRealKeyphrasesCount = TotalRealKeyphrasesCount + RealKeyphrasesCount
+    TotalExtractedKeyphrasesCount = TotalExtractedKeyphrasesCount + ExtractedKeyphrasesCount
+    //    if(NounPhrases.length>AppConfig.ResultKeywordsCount)
+    //      SweetOut.printLine("NounPhrases Length Are More Than ResultKeywordsCount"+NounPhrases.length+"/"+AppConfig.ResultKeywordsCount,4)
+    val Exact_Precision: Double = Exact_TruePositivesCount / ExtractedKeyphrasesCount
+    val Exact_Recall: Double = Exact_TruePositivesCount / RealKeyphrasesCount
+    var Exact_FScore: Double = 0d
+    if (Exact_Precision + Exact_Recall > 0)
+      Exact_FScore = 2 * Exact_Precision * Exact_Recall / (Exact_Precision + Exact_Recall)
+
+    val Approx_Precision: Double = Approx_TruePositivesCount / ExtractedKeyphrasesCount
+    val Approx_Recall: Double = Approx_TruePositivesCount / RealKeyphrasesCount
+    var Approx_FScore: Double = 0d
+    if (Approx_Precision + Approx_Recall > 0)
+      Approx_FScore = 2 * Approx_Precision * Approx_Recall / (Approx_Precision + Approx_Recall)
+
     val dtf = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss")
     val now = LocalDateTime.now()
+    Result = "-1\t-------------------Real Keywords Of " + currentTestID + "-------------------\t0\r\n" + Result
+    val GoldKeyphrases = RealKeyPhrases(currentTestID)
+    GoldKeyphrases.foreach(GKP => {
+
+      Result = "**\t" + GKP + "\t**\r\n" + Result
+    })
+    Result = "-1\t-------------------Real Keywords Of " + currentTestID + "-------------------\t0\r\n" + Result
     Result = "Result Keyword Count:" + AppConfig.ResultKeywordsCount + "\n" + Result
     Result = "Noun influence:" + AppConfig.NounInfluence + "\n" + Result
     Result = "Noun out-influence:" + AppConfig.NounOutInfluence + "\n" + Result
@@ -309,37 +369,66 @@ class KpexEngine extends KpexContext {
     Result = "Date:" + dtf.format(now) + "\n" + Result
     Result = "URL:" + AppConfig.DatabaseContextURLs(currentTestID) + "\n" + Result
     Result = "Title:" + AppConfig.DatabaseContextTitles(currentTestID) + "\n" + Result
-    Result = "3\tF-Score\t" +FScore + "\n" + Result
-    Result = "2\tRecall\t" + Recall + "\n" + Result
-    Result = "1\tPrecision\t" + Precision + "\n" + Result
-    Result = "0\tRate\t" + RateInt + "\n" + Result
-    SweetOut.printLine("Rate:" + RateInt,4)
-    SweetOut.printLine("Precision:"+Precision,4)
-    SweetOut.printLine("Recall:"+Recall,4)
-    SweetOut.printLine("FScore:"+FScore,4)
-    FullResult=FullResult+"\r\n-------------------"+currentTestID+"-------------------\r\n"
-    FullResult=FullResult+Result
-//    SweetOut.printLine("Saving In:" + AppConfig.DataSetKeyWordsPath,1)
+
+    SweetOut.printLine("Approx Rate:" + ApproxRateInt, 4)
+    SweetOut.printLine("Approx Precision:" + Approx_Precision, 4)
+    SweetOut.printLine("Approx Recall:" + Approx_Recall, 4)
+    SweetOut.printLine("Approx FScore:" + Approx_FScore, 4)
+
+    Result = "7\tApprox F-Score\t" + Approx_FScore + "\n" + Result
+    Result = "6\tApprox Recall\t" + Approx_Recall + "\n" + Result
+    Result = "5\tApprox Precision\t" + Approx_Precision + "\n" + Result
+    Result = "4\tApprox Rate\t" + ApproxRateInt + "\n" + Result
+
+
+    Result = "3\tExact F-Score\t" + Exact_FScore + "\n" + Result
+    Result = "2\tExact Recall\t" + Exact_Recall + "\n" + Result
+    Result = "1\tExact Precision\t" + Exact_Precision + "\n" + Result
+    Result = "0\tExact Rate\t" + ExactRateInt + "\n" + Result
+
+    SweetOut.printLine("Exact Rate:" + ExactRateInt, 4)
+    SweetOut.printLine("Exact Precision:" + Exact_Precision, 4)
+    SweetOut.printLine("Exact Recall:" + Exact_Recall, 4)
+    SweetOut.printLine("Exact FScore:" + Exact_FScore, 4)
+
+    FullResult = FullResult + "\r\n-------------------Real Keywords Of " + currentTestID + "-------------------\r\n"
+    FullResult = FullResult + "\r\n-------------------" + currentTestID + "-------------------\r\n"
+    FullResult = FullResult + Result
+    //    SweetOut.printLine("Saving In:" + AppConfig.DataSetKeyWordsPath,1)
   }
 
-  def WriteResultsToStorage(spark: SparkSession): Unit =
-  {
-    FullResult=FullResult+"\r\nTotalTruePositivesCount:"+TotalTruePositivesCount
-    FullResult=FullResult+"\r\nTotalRealKeyphrasesCount:"+TotalRealKeyphrasesCount
-    FullResult=FullResult+"\r\nTotalExtractedKeyphrasesCount:"+TotalExtractedKeyphrasesCount
+  def WriteResultsToStorage(spark: SparkSession): Unit = {
+    FullResult = FullResult + "\r\nTotalExactTruePositivesCount:" + TotalExactTruePositivesCount
+    FullResult = FullResult + "\r\nTotalApproxTruePositivesCount:" + TotalApproxTruePositivesCount
+    FullResult = FullResult + "\r\nTotalRealKeyphrasesCount:" + TotalRealKeyphrasesCount
+    FullResult = FullResult + "\r\nTotalExtractedKeyphrasesCount:" + TotalExtractedKeyphrasesCount
 
-    val Precision:Double=    TotalTruePositivesCount /TotalExtractedKeyphrasesCount
-    val Recall:Double=    TotalTruePositivesCount / TotalRealKeyphrasesCount
-    var FScore:Double=0d
-    if(Precision+Recall>0)
-      FScore=2*Precision*Recall/(Precision+Recall)
-    SweetOut.printLine("Total Precision:"+Precision,4)
-    SweetOut.printLine("Total Recall:"+Recall,4)
-    SweetOut.printLine("Total FScore:"+FScore,4)
+    val Exact_Precision: Double = TotalExactTruePositivesCount / TotalExtractedKeyphrasesCount
+    val Exact_Recall: Double = TotalExactTruePositivesCount / TotalRealKeyphrasesCount
+    var Exact_FScore: Double = 0d
+    if (Exact_Precision + Exact_Recall > 0)
+      Exact_FScore = 2 * Exact_Precision * Exact_Recall / (Exact_Precision + Exact_Recall)
+    SweetOut.printLine("Total Exact_Precision:" + Exact_Precision, 4)
+    SweetOut.printLine("Total Exact_Recall:" + Exact_Recall, 4)
+    SweetOut.printLine("Total Exact_FScore:" + Exact_FScore, 4)
 
-    FullResult=FullResult+"\r\nTotal Precision:"+Precision
-    FullResult=FullResult+"\r\nTotal Recall:"+Recall
-    FullResult=FullResult+"\r\nTotal FScore:"+FScore
+    FullResult = FullResult + "\r\nTotal Exact_Precision:" + Exact_Precision
+    FullResult = FullResult + "\r\nTotal Exact_Recall:" + Exact_Recall
+    FullResult = FullResult + "\r\nTotal Exact_FScore:" + Exact_FScore
+
+    val Approx_Precision: Double = TotalApproxTruePositivesCount / TotalExtractedKeyphrasesCount
+    val Approx_Recall: Double = TotalApproxTruePositivesCount / TotalRealKeyphrasesCount
+    var Approx_FScore: Double = 0d
+    if (Approx_Precision + Approx_Recall > 0)
+      Approx_FScore = 2 * Approx_Precision * Approx_Recall / (Approx_Precision + Approx_Recall)
+    SweetOut.printLine("Total Approx_Precision:" + Approx_Precision, 4)
+    SweetOut.printLine("Total Approx_Recall:" + Approx_Recall, 4)
+    SweetOut.printLine("Total Approx_FScore:" + Approx_FScore, 4)
+
+    FullResult = FullResult + "\r\nTotal Approx_Precision:" + Approx_Precision
+    FullResult = FullResult + "\r\nTotal Approx_Recall:" + Approx_Recall
+    FullResult = FullResult + "\r\nTotal Approx_FScore:" + Approx_FScore
+
     val fs = FileSystem.newInstance(spark.sparkContext.hadoopConfiguration)
     val output = fs.create(new Path(AppConfig.DataSetFullResultPath))
     val os = new BufferedOutputStream(output)
@@ -357,7 +446,7 @@ class KpexEngine extends KpexContext {
 
 
   protected def Init(spark: SparkSession, args: Array[String]): Unit = {
-    SweetOut.printLine("/Initiating...",5)
+    SweetOut.printLine("/Initiating...", 5)
 
     /** ********Loading Parameters ************/
     // Sample Run Command: SweetKPE.jar hdfs postag 50 0.8 0.5 0.8 0.5 /in/mohammadi/data2/
@@ -365,18 +454,16 @@ class KpexEngine extends KpexContext {
     // Sample Run Command Help: SweetKPE.jar nohdfs nopostag RESULTKEYWORD_COUNT NOUN_INFLUENCE NOUN_OUT_INFLUENCE ADJECTIVE_INFLUENCE ADJECTIVE_OUT_INFLUENCE DataSetDirectory
 
     LoadArgs(spark, args)
-//    SweetOut.printLine("Dataset Directory:" + AppConfig.DataSetDirectory)
+    //    SweetOut.printLine("Dataset Directory:" + AppConfig.DataSetDirectory)
     /** ********End Of Loading Parameters ************/
 
 
-
-
-    SweetOut.printLine("/Initiation Completed...",5)
+    SweetOut.printLine("/Initiation Completed...", 5)
   }
-  protected def LoadPerTestArgs(spark: SparkSession,TestID:Int): Unit =
-  {
-    AppConfig.ResultDirectoryName="result"+TestID
-    AppConfig.ResultDirectory = "/in/results/"+AppConfig.ResultDirectoryName
+
+  protected def LoadPerTestArgs(spark: SparkSession, TestID: Int): Unit = {
+    AppConfig.ResultDirectoryName = "result" + TestID
+    AppConfig.ResultDirectory = "/in/results/" + AppConfig.ResultDirectoryName
     AppConfig.GraphPath = AppConfig.ResultDirectory + "/DataGraph.csv"
     AppConfig.VisualGraphPath = AppConfig.ResultDirectory + "/DataGraph.html"
     AppConfig.DataSetPath = AppConfig.DataSetDirectory + "data.txt"
@@ -406,6 +493,7 @@ class KpexEngine extends KpexContext {
     }
     AppConfig.DataSetKeyWordsPath = AppConfig.ResultDirectory + "/keywords" + TestID + ".txt"
   }
+
   protected def LoadArgs(spark: SparkSession, args: Array[String]): Unit = {
   }
 }

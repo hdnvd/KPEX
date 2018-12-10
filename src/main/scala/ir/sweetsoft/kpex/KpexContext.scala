@@ -11,11 +11,17 @@ class KpexContext extends Serializable{
    var NewIdentificationMap: Map[Long, String] = Map()
    var MysqlConfigs: java.util.Properties = null
    var RealKeyPhrases: Map[Int,Seq[String]] = Map()
-   var algorithmRate = 0d
-   var TruePositivesCount = 0d
-   var TotalTruePositivesCount = 0d
-   var TotalRealKeyphrasesCount = 0d
-   var TotalExtractedKeyphrasesCount = 0d
+   var Exact_AlgorithmRate = 0d
+   var Exact_TruePositivesCount = 0d
+
+  var Approx_AlgorithmRate = 0d
+  var Approx_TruePositivesCount = 0d
+
+   var TotalApproxTruePositivesCount = 0d
+  var TotalExactTruePositivesCount = 0d
+
+  var TotalRealKeyphrasesCount = 0d
+  var TotalExtractedKeyphrasesCount = 0d
    var inputString:Map[Int,String]=Map()
    var ExistentSimilarEdges:Map[(Long,Long),Int]=Map() //The Edges that Exists Between Similar Edges without need to our add
    var wordEmbeds:Map[Int,WordEmbed]=Map()
@@ -27,8 +33,11 @@ class KpexContext extends Serializable{
     NounPhrases= Seq()
     WordFrequencies= Map()
     NewIdentificationMap= Map()
-    algorithmRate = 0d
-    TruePositivesCount = 0d
+    Approx_AlgorithmRate = 0d
+    Approx_TruePositivesCount = 0d
+
+    Exact_AlgorithmRate = 0d
+    Exact_TruePositivesCount = 0d
     ExistentSimilarEdges=Map()
   }
 }

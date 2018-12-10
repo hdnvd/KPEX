@@ -33,6 +33,8 @@ class NLPTools(ApplicationContext:KpexContext) extends KpexClass(ApplicationCont
     Result = Result.replace(")","")
     Result = Result.replace("?","")
     Result = Result.replace(":","")
+    Result = Result.replace("/","")
+    Result = Result.replace("\\","")
     Result = Result.replace("!","")
     Result = Result.replace("'","")
     Result = Result.replace("`","")

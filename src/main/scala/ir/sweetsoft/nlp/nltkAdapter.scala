@@ -79,7 +79,7 @@ class nltkAdapter(ApplicationContext:KpexContext) extends KpexClass(ApplicationC
               var QueueWordsCount=0
               npWords.foreach(word=>{
                 SweetOut.printLine("Word:"+word,1)
-                val WordParts=word.split("/")
+                val WordParts=word.split("_")
                 PureWord=PureWord+" "+WordParts(0)
                 if(WordParts.length<2)
                   QueueWordsCount=QueueWordsCount+1

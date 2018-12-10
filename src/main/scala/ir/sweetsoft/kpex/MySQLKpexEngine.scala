@@ -135,6 +135,7 @@ class MySQLKpexEngine extends KpexEngine  {
     inputStringWords.foreach(word => {
       AllWords=AllWords+",'"+word+"'"
     })
+    SweetOut.printLine("Words:"+AllWords,1)
     val wordVectors = spark.read
       .format("jdbc")
       .option("url", MysqlConfigs.getProperty("url"))
