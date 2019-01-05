@@ -6,12 +6,12 @@ object SweetOut {
 
   def printLine(x:Any): Unit =
   {
-    println(DateTime.now()+x.toString)
-//    println(x.toString)
+//    println(DateTime.now()+x.toString)
+    printLine(x,1)
   }
   def printLine(x:Any,Priority:Int): Unit =
   {
-    if(Priority>=4)
+    if(Priority>=5)
       printLine(x)
   }
   def printOne(x:Any): Unit =

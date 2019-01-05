@@ -153,7 +153,7 @@ class GraphIO(ApplicationContext:KpexContext) extends KpexClass(ApplicationConte
           val CoOccurance=line(ValueIndex).toDouble
           val FirstWordFrequency=appContext.WordFrequencies(FirstWord)
           val SecondWordFrequency=appContext.WordFrequencies(SecondWord)
-          if(appContext.NounPhrases.exists(phrase=>phrase.contains(FirstWord))){
+          if(appContext.CurrentCorpus.Tests(appContext.currentTestID).ExtractedPhrases.exists(phrase=>phrase.Phrase.contains(FirstWord))){
             SweetOut.printLine("Found A Phrase",1)
             OutInfluence=appContext.AppConfig.NounOutInfluence
             role=1
@@ -162,7 +162,7 @@ class GraphIO(ApplicationContext:KpexContext) extends KpexClass(ApplicationConte
             OutInfluence=appContext.AppConfig.AdjectiveOutInfluence
             role=2
           }
-          if(appContext.NounPhrases.exists(phrase=>phrase.contains(SecondWord))){
+          if(appContext.CurrentCorpus.Tests(appContext.currentTestID).ExtractedPhrases.exists(phrase=>phrase.Phrase.contains(SecondWord))){
             SweetOut.printLine("Found A Phrase",1)
             Influence=appContext.AppConfig.NounInfluence
             role=1
@@ -191,7 +191,6 @@ class GraphIO(ApplicationContext:KpexContext) extends KpexClass(ApplicationConte
 //              SimilarityInfluence=100
 //              flag = !flag
 //            }
-
           val DiceResult=Dice(FirstWordFrequency,SecondWordFrequency,CoOccurance)
           appContext.NewIdentificationMap=appContext.NewIdentificationMap+(MurmurHash3.stringHash(FirstWord).toLong->FirstWord)
           appContext.NewIdentificationMap=appContext.NewIdentificationMap+(MurmurHash3.stringHash(SecondWord).toLong->SecondWord)

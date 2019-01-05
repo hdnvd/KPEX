@@ -44,7 +44,11 @@ class NLPTools(ApplicationContext:KpexContext) extends KpexClass(ApplicationCont
   def removeSingleCharactersAndSeparateWithSpace(InputString:String): String =
   {
     val words=GetStringWords(InputString.replace("'",""))
-    var result=""
+    getPhraseFromWords(words)
+  }
+  def getPhraseFromWords(words:Seq[String]): String =
+  {
+    var result:String=""
     words.foreach(word=>if(word.trim.length>1)
     {
       result=result+" "+word.trim
@@ -54,7 +58,8 @@ class NLPTools(ApplicationContext:KpexContext) extends KpexClass(ApplicationCont
   }
   private def NormalizeWord(Word: String): String = {
     var ResultString = replaceExtraCharactersFromWord(Word)
-    stem(ResultString)
+//    stem(ResultString)
+    ResultString
   }
   def GetNormalizedAndLemmatizedWord(Word: String,TestID:Int): String = {
     var ResultString = replaceExtraCharactersFromWord(Word)
@@ -62,7 +67,7 @@ class NLPTools(ApplicationContext:KpexContext) extends KpexClass(ApplicationCont
       ResultString = ""
     else
       ResultString=getWordLemmatizedForm(ResultString,TestID)
-    ResultString=stem(ResultString)
+//    ResultString=stem(ResultString)
     ResultString
   }
   def stem(WordName:String): String =

@@ -3,14 +3,10 @@ package ir.sweetsoft.kpex
 import ir.sweetsoft.WordEmbedding.WordEmbed
 
 class KpexContext extends Serializable{
-   var NounPhrases: Seq[String] = Seq()
-   var NounPhrasePosTags: Map[String,String] = Map()
-   var AllNounPhrases: Map[Int,Seq[String]] = Map()
-   var AllNounPhrasePosTags: Map[Int,Map[String,String]] = Map()
+   var currentTestID: Int = 0
    var WordFrequencies: Map[String,Int] = Map()
    var NewIdentificationMap: Map[Long, String] = Map()
-   var MysqlConfigs: java.util.Properties = null
-   var RealKeyPhrases: Map[Int,Seq[String]] = Map()
+   var MysqlConfigs: java.util.Properties = _
    var Exact_AlgorithmRate = 0d
    var Exact_TruePositivesCount = 0d
 
@@ -22,15 +18,15 @@ class KpexContext extends Serializable{
 
   var TotalRealKeyphrasesCount = 0d
   var TotalExtractedKeyphrasesCount = 0d
-   var inputString:Map[Int,String]=Map()
    var ExistentSimilarEdges:Map[(Long,Long),Int]=Map() //The Edges that Exists Between Similar Edges without need to our add
-   var wordEmbeds:Map[Int,WordEmbed]=Map()
+  var TotalWordEmbed:WordEmbed=new WordEmbed()
+  var CurrentCorpus:Corpus=new Corpus(this)
    var AppConfig:KpexConfig=new KpexConfig()
    var LemmatizationMaps:scala.collection.mutable.Map[Int,scala.collection.mutable.Map[String,String]]=scala.collection.mutable.Map()
    var FullResult:String=""
   def resetContextData(): Unit =
   {
-    NounPhrases= Seq()
+//    NounPhrases= Seq()
     WordFrequencies= Map()
     NewIdentificationMap= Map()
     Approx_AlgorithmRate = 0d

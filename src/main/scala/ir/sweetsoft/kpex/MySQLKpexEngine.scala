@@ -2,9 +2,8 @@ package ir.sweetsoft.kpex
 
 import java.util.Properties
 
-import ir.sweetsoft.WordEmbedding.WordEmbed
 import ir.sweetsoft.common.SweetOut
-import ir.sweetsoft.nlp.{NLPTools, nltkAdapter}
+import ir.sweetsoft.nlp.NLPTools
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.SparkSession
 
@@ -67,10 +66,10 @@ class MySQLKpexEngine extends KpexEngine  {
       AppConfig.GraphImportanceMethod = MethodID
       SweetOut.printLine("Method ID:"+AppConfig.GraphImportanceMethod,1)
 
-      var TotalInputString=""
+//      var TotalInputString=""
       testCollected.foreach(test=>
         {
-          var ContextID = test.getInt(11)
+          val ContextID = test.getInt(11)
           val TestID=test.getInt(0)
           currentTestID=TestID
           SweetOut.printLine("ContextID : " + ContextID,1)
@@ -84,37 +83,18 @@ class MySQLKpexEngine extends KpexEngine  {
           AppConfig.DatabaseContextTitles = AppConfig.DatabaseContextTitles +(TestID->context.collect()(0).getString(4))
           AppConfig.DatabaseContextURLs = AppConfig.DatabaseContextURLs +(TestID->context.collect()(0).getString(3))
           val theinputString=context.collect()(0).getString(5)
-          var NormalizedString=NormalizeString(theinputString)
-          inputString=inputString+(TestID->NormalizedString)
-          if(!NormalizedString.substring(NormalizedString.length-1).equals("."))
-            NormalizedString = NormalizedString+"."
-          NormalizedString=NormalizedString.trim
-          if(TotalInputString!="")
-            TotalInputString=TotalInputString+"\r\n"
-          TotalInputString=TotalInputString+AppConfig.TEST_SEPARATOR_TEXT+"\r\n"+NormalizedString
-          var realkeywordstext = context.collect()(0).getString(7)
-          val nlp=new NLPTools(this)
-          nlp.addToLemmatizationMap(inputString(TestID),TestID)
-          var theRealKeyPhrases=realkeywordstext.split(",")
-          theRealKeyPhrases=theRealKeyPhrases.map(Phrase=>
-          {
-            nlp.addToLemmatizationMap(Phrase,TestID)
-            val Words=nlp.GetStringWords(Phrase)
-            var Result=""
-            Words.foreach(Word=>
-            {
-              Result=Result+" "+nlp.GetNormalizedAndLemmatizedWord(Word,currentTestID)
-            })
-            Result.trim.toLowerCase
-          })
-          RealKeyPhrases=RealKeyPhrases+(TestID->theRealKeyPhrases)
+          CurrentCorpus.addTestContext(TestID,theinputString)
+          val realkeywordstext = context.collect()(0).getString(7)
+          val theRealKeyPhrases=realkeywordstext.split(",")
+          theRealKeyPhrases.foreach(phrase=>CurrentCorpus.Tests(TestID).addGoldPhrase(phrase))
+//          RealKeyPhrases=RealKeyPhrases+(TestID->theRealKeyPhrases)
           LoadWordVectors(spark,TestID)
         })
-      TotalInputString=TotalInputString+"\r\n"+AppConfig.TEST_SEPARATOR_TEXT+"\r\n"
+      CurrentCorpus.commitChanges()
 //      val AllNounPhrasesData=new textBlobAdapter(this).GetTotalNounPhrases(spark,TotalInputString)
-      val AllNounPhrasesData=new nltkAdapter(this).GetTotalNounPhrases(spark,TotalInputString)
+//      val AllNounPhrasesData=new nltkAdapter(this).GetTotalNounPhrases(spark,CurrentCorpus.TotalText)
 //      AllNounPhrases=AllNounPhrasesData.head
-      AllNounPhrasePosTags=AllNounPhrasesData
+//      AllNounPhrasePosTags=AllNounPhrasesData
       AppConfig.SingleOutput = true
 
     }
@@ -123,12 +103,11 @@ class MySQLKpexEngine extends KpexEngine  {
   private def LoadWordVectors(spark: SparkSession,TestID:Int): Unit =
   {
     val nlp=new NLPTools(this)
-    var inputStringWords = nlp.GetStringWords(inputString(TestID))
-    var WordsVectorMap: Map[String, Array[Double]] = Map()
+    var inputStringWords = CurrentCorpus.Tests(TestID).Words
     var AllWords="'unknown'"
-    inputStringWords=inputStringWords.distinct.map(word=>
+    inputStringWords=inputStringWords.map(word=>
     {
-      val normalWord=nlp.replaceExtraCharactersFromWord(word).trim  //Normalizing All Words
+      val normalWord=nlp.replaceExtraCharactersFromWord(word).trim.toLowerCase()  //Normalizing All Words
       SweetOut.printLine("Word " + word+" made "+normalWord,1)
       normalWord
     })
@@ -141,24 +120,24 @@ class MySQLKpexEngine extends KpexEngine  {
       .option("url", MysqlConfigs.getProperty("url"))
       .option("user", MysqlConfigs.getProperty("user"))
       .option("password", MysqlConfigs.getProperty("password"))
-      .option("dbtable", "(SELECT * FROM sweetp_kpex_wordvector WHERE trim(word) IN (" + AllWords + ") limit 0,"+(inputStringWords.length+1)+") wv")
+//      .option("dbtable", "(SELECT * FROM sweetp_kpex_wordvector WHERE trim(word) IN (" + AllWords + ") limit 0,"+(inputStringWords.length+1)+") wv")
+      .option("dbtable", "(SELECT * FROM sweetp_kpex_wordvectorsenna WHERE trim(word) IN (" + AllWords + ") limit 0,"+(inputStringWords.length+1)+") wv")
       .load().collect()
     inputStringWords.foreach(word => {
-      // Removed At 96/06/17 val normalWord = TextMan.replace(word, Seq(), false)
+      // Removed At 97/06/17 val normalWord = TextMan.replace(word, Seq(), false)
       val wordVector=wordVectors.filter(row=>row.getString(4).equals(word)).take(1)
       val wordLemma = nlp.GetNormalizedAndLemmatizedWord(word,currentTestID)
       if (wordVector.length > 0 && wordLemma.length > 0) {
         SweetOut.printLine("Word Is " + word+" made "+wordLemma+" And Has Vector",1)
           val StringVector=wordVector(0).getString(5).split(",")
           val IntVector:Array[Double]=StringVector.map(sv=>sv.toDouble)
-          WordsVectorMap = WordsVectorMap + (wordLemma -> IntVector)
+        TotalWordEmbed.PutWordVector(TestID,wordLemma,IntVector)
       }
       else {
-        SweetOut.printLine("Word Is "+word+" And Has No Vector",1)
+        SweetOut.printLine("Word Is "+word+" made "+wordLemma+"  And Has No Vector",1)
       }
 
     })
-    wordEmbeds=wordEmbeds+(TestID->new WordEmbed(WordsVectorMap))
   }
 
   override protected def Init(spark: SparkSession, args: Array[String]): Unit = {
@@ -170,11 +149,6 @@ class MySQLKpexEngine extends KpexEngine  {
     AppConfig.ResultDirectoryName="result"+TestID
     super.LoadPerTestArgs(spark,TestID)
     AppConfig.DataSetKeyWordsPath = AppConfig.ResultDirectory + "/keywords" + TestID + ".txt"
-  }
-  override def getInputStringRDD(spark: SparkSession): RDD[String] = {
-    val lineArray = inputString(currentTestID).split("\n")
-    val input = spark.sparkContext.parallelize(lineArray)
-    input
   }
 
 

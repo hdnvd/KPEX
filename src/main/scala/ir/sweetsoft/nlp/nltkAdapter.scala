@@ -6,41 +6,6 @@ import org.apache.spark.sql.SparkSession
 
 class nltkAdapter(ApplicationContext:KpexContext) extends KpexClass(ApplicationContext:KpexContext)
 {
-//  def GetNounPhrases(spark: SparkSession, inputString: String,TestID:Int) : Seq[String] = {
-//    println("Loading Noun Phrases...")
-//
-//    val dataRDD = spark.sparkContext.makeRDD(Seq(inputString.toLowerCase))
-//    val scriptPath = "python /home/hduser/FinalProject/np.py"
-//    val pipeRDD = dataRDD.pipe(scriptPath)
-//    var NounPhrases:Seq[String] = pipeRDD.collect.distinct
-//    var ProcessedNPs: Seq[String] = Seq()
-//    NounPhrases.foreach {
-//      np =>
-//
-//        val nlp=new NLPTools(appContext)
-//        var Words=nlp.GetStringWords(np)
-//        Words=Words.flatMap(Word=>
-//        {
-//          val wd=nlp.GetNormalizedAndLemmatizedWord(Word,TestID)
-//          if(wd.trim!="")
-//            Seq(wd)
-//          else
-//            Seq()
-//        })
-//        //        val npSeq = nlp.plainTextToLemmas(np, false)
-//        var npSeqStr = ""
-//        Words.foreach {
-//          n =>
-//            //            println("NPWord is:"+n)
-//            if (npSeqStr != "")
-//              npSeqStr = npSeqStr + " "
-//            npSeqStr = npSeqStr + n
-//        }
-//        ProcessedNPs = ProcessedNPs ++ Seq(npSeqStr)
-//    }
-//    NounPhrases = ProcessedNPs.distinct
-//    NounPhrases
-//  }
   def GetTotalNounPhrases(spark: SparkSession,TotalInputString: String) : Map[Int,Map[String,String]] = {
     SweetOut.printLine("Loading Noun Phrases...",1)
     SweetOut.printLine(TotalInputString,1)
@@ -51,10 +16,8 @@ class nltkAdapter(ApplicationContext:KpexContext) extends KpexClass(ApplicationC
     SweetOut.printLine("Loaded Noun Phrases From Python",1)
     var TotalNounPhrases:Seq[String] = pipeRDD.collect
     SweetOut.printLine("Collected Noun Phrases",1)
-    //    NounPhrases=NounPhrases.distinct
     var ProcessedNPs: Seq[String] = Seq()
     var TestID = -1
-//    var AllNounPhrases: Map[Int,Seq[String]] = Map()
   var AllNounPhrasePosTags: Map[Int,Map[String,String]]  = Map()
   var TestIndex=0
     TotalNounPhrases.foreach {
@@ -93,25 +56,12 @@ class nltkAdapter(ApplicationContext:KpexContext) extends KpexClass(ApplicationC
               NpPosTags=NpPosTags+(PureWord.trim->PosTags.trim)
             }
             )
-//            DistinctProcessedNPs=DistinctProcessedNPs.map(np=>
-//            {
-//              val npWords=np.split(" ")
-//              var PureWord=""
-//              npWords.foreach(word=>{
-//                val WordParts=word.split("/")
-//                PureWord=PureWord+" "+WordParts(0)
-//              })
-//              SweetOut.printLine("PureWord:"+PureWord,1)
-//              PureWord.trim
-//            }
-//            )
-
-//            AllNounPhrases=AllNounPhrases+(TestID->DistinctProcessedNPs)
             AllNounPhrasePosTags=AllNounPhrasePosTags+(TestID->NpPosTags)
             ProcessedNPs=Seq()
           }
           if(TestIndex<ApplicationContext.AppConfig.DatabaseTestIDs.length)
             TestID=ApplicationContext.AppConfig.DatabaseTestIDs(TestIndex)
+          SweetOut.printLine("TestID"+TestID,1)
           TestIndex=TestIndex+1
         }
         else
@@ -122,7 +72,6 @@ class nltkAdapter(ApplicationContext:KpexContext) extends KpexClass(ApplicationC
           Words=Words.flatMap(Word=>
           {
             val wd=nlp.GetNormalizedAndLemmatizedWord(Word,TestID)
-            //              val wd=""
             if(wd.trim!="")
               Seq(wd)
             else
@@ -139,8 +88,8 @@ class nltkAdapter(ApplicationContext:KpexContext) extends KpexClass(ApplicationC
         }
 
     }
-    //    NounPhrases = ProcessedNPs.distinct
     SweetOut.printLine("Loading Noun Phrases Completed",1)
+    SweetOut.printLine("AllNounPhrasePosTags "+AllNounPhrasePosTags.size,1)
     AllNounPhrasePosTags
   }
 }
