@@ -44,6 +44,7 @@ class KpexConfig extends Serializable {
   var ResultDirectoryName:String="result"
   var DataSetDirectory:String = DataSetsPath
   var GraphPath:String  = DataSetDirectory + "/dataGraph.csv"
+  var NPCatchPath:String  = DataSetDirectory + "/catch.csv"
   var VisualGraphPath:String  = DataSetDirectory + "/dataGraph.html"
   var DataSetPath :String = DataSetDirectory + "data.txt"
   var DataSetKeyWordsPath:String  = DataSetDirectory + "keywords.txt"

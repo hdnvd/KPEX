@@ -83,27 +83,44 @@ class KpexEngine extends KpexContext {
   }
   private def CalculateAndGetNounPhrasesRateByMeanVectors(): String = {
     SweetOut.printLine("NounPhrase Count"+CurrentCorpus.Tests(currentTestID).ExtractedPhrases.length,1)
-    val NPMap:Seq[(Phrase,Double)] = CurrentCorpus.Tests(currentTestID).ExtractedPhrases.map {
+    val NPMap:Seq[(Phrase,Double)] = CurrentCorpus.Tests(currentTestID).ExtractedPhrases.flatMap {
       np =>
-        val words = np.words
-        var rate = 0d
+        if(np.OccurrenceInTest<1)
+          Seq()
+        else
+          {
+            val words = np.words
+            var rate = 0d
 
-        if (words.nonEmpty) {
-
-//          val DistanceFromTest=TotalWordEmbed.getEuclideanDistanceFromCurrentTest(words)
-//          val DistanceFromCorpus=TotalWordEmbed.getEuclideanDistanceFromCorpus(words)
-//          rate =(DistanceFromCorpus/DistanceFromTest) * words.length
-          val NounPhraseHead = words.last
-          val NounPhraseLength = words.length
-          for (i <- (NounPhraseLength - 1) to 0 by -1) {
-            val word = words(i)
-            val DistanceFromTest=TotalWordEmbed.getEuclideanDistanceFromCurrentTest(word)
-            val DistanceFromCorpus=TotalWordEmbed.getEuclideanDistanceFromCorpus(word)
-              rate = rate + DistanceFromCorpus/DistanceFromTest
+            if (words.nonEmpty) {
+              val NPHead=words.last
+              //          val PhraseDistanceFromTest=TotalWordEmbed.getEuclideanDistanceFromCurrentTest(words)
+              //          val PhraseDistanceFromCorpus=TotalWordEmbed.getEuclideanDistanceFromCorpus(words)
+              //          rate =(DistanceFromCorpus/DistanceFromTest) * words.length
+              val NounPhraseHead = words.last
+              val NounPhraseLength = words.length
+              for (i <- (NounPhraseLength - 1) to 0 by -1) {
+                val word = words(i)
+                val DistanceFromTest=TotalWordEmbed.getEuclideanDistanceFromCurrentTest(word)
+                val DistanceFromPhraseHead=TotalWordEmbed.getEuclideanDistanceBetweenWords(word,NPHead)
+                val DistanceFromCorpus=TotalWordEmbed.getEuclideanDistanceFromCorpus(word)
+                val DistanceFromTestNounPhrases=TotalWordEmbed.getEuclideanDistanceFromCurrentTestNounPhrases(word)
+                val DistanceFromCorpusNounPhrases=TotalWordEmbed.getEuclideanDistanceFromCorpusNounPhrases(word)
+                //            SweetOut.printLine("Distances:"+DistanceFromTest+" "+DistanceFromCorpus+" "+DistanceFromTestNounPhrases+" "+DistanceFromCorpusNounPhrases+" ",10)
+                var wordRate=DistanceFromCorpus/DistanceFromTest*DistanceFromCorpusNounPhrases/DistanceFromTestNounPhrases
+                //            var wordRate=10/DistanceFromTestNounPhrases
+//                SweetOut.printLine("DistanceFromPhraseHead"+DistanceFromPhraseHead,9)
+                if(DistanceFromPhraseHead>0)
+                  wordRate=wordRate+wordRate/DistanceFromPhraseHead
+                else if(DistanceFromPhraseHead==0)
+                  wordRate=wordRate+wordRate/4
+                rate = rate +wordRate
+              }
+              //          rate=PhraseDistanceFromCorpus/PhraseDistanceFromTest
             }
+            Seq((np, rate))
           }
 
-        (np, rate)
         }
     GetNounPhrasesSortedByRate(NPMap)
   }

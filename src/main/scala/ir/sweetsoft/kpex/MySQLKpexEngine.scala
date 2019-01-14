@@ -16,7 +16,7 @@ class MySQLKpexEngine extends KpexEngine  {
   override protected def LoadArgs(spark: SparkSession, args: Array[String]): Unit = {
     if (args.length > 2) {
       AppConfig.DatabaseTestIDsString=args(2)
-
+SweetOut.printLine("twstID"+AppConfig.DatabaseTestIDsString,10)
       var TestIDsInfo=AppConfig.DatabaseTestIDsString.split("-")
       var TestIDFrom=TestIDsInfo(0).toInt
       var TestIDTo=TestIDFrom

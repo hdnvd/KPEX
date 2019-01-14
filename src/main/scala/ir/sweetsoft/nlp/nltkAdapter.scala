@@ -33,17 +33,17 @@ class nltkAdapter(ApplicationContext:KpexContext) extends KpexClass(ApplicationC
             SweetOut.printLine("TestID Is "+TestID,1)
             var DistinctProcessedNPs=ProcessedNPs.distinct
             var NpPosTags:Map[String,String]=Map()
-            DistinctProcessedNPs.foreach(np=>
+            ProcessedNPs.foreach(np=>
             {
               SweetOut.printLine("NP:"+np,1)
               val npWords=np.split(" ")
               var PosTags=""
-              var PureWord=""
+              var PurePhrase=""
               var QueueWordsCount=0
               npWords.foreach(word=>{
                 SweetOut.printLine("Word:"+word,1)
                 val WordParts=word.split("_")
-                PureWord=PureWord+" "+WordParts(0)
+                PurePhrase=PurePhrase+" "+WordParts(0)
                 if(WordParts.length<2)
                   QueueWordsCount=QueueWordsCount+1
                 else{
@@ -53,7 +53,7 @@ class nltkAdapter(ApplicationContext:KpexContext) extends KpexClass(ApplicationC
                 }
               })
               SweetOut.printLine("PosTag:"+PosTags,1)
-              NpPosTags=NpPosTags+(PureWord.trim->PosTags.trim)
+              NpPosTags=NpPosTags+(PurePhrase.trim->PosTags.trim)
             }
             )
             AllNounPhrasePosTags=AllNounPhrasePosTags+(TestID->NpPosTags)

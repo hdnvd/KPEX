@@ -1,6 +1,5 @@
 package ir.sweetsoft.kpex
 
-import ir.sweetsoft.common.SweetOut
 import org.apache.spark.sql.SparkSession
 
 object KpexApp extends MySQLKpexEngine {
@@ -42,20 +41,20 @@ object KpexApp extends MySQLKpexEngine {
 
 //      NounPhrases = NounPhrasePosTags.keySet.toSeq
       //    RemoveExtraWordsFromNounPhrasesBySimilarity()
-      theGraphIO.makeWordGraphFile(spark, CurrentCorpus.Tests(currentTestID).FullText)
+//      theGraphIO.makeWordGraphFile(spark, CurrentCorpus.Tests(currentTestID).FullText)
       val file = spark.sparkContext.textFile(AppConfig.GraphPath)
-      var graph = theGraphIO.LoadGraph(spark, file, TotalWordEmbed)
-      theGraphIO.MakeVisualizedGraphFile(spark, graph)
-      var IdentificationMapText = ""
-      NewIdentificationMap.keys.foreach {
-        Key =>
-          IdentificationMapText += Key + "\t" + NewIdentificationMap(Key)
-      }
-      theIO.WriteToFile(spark, AppConfig.IdentificationMapPath, IdentificationMapText, false)
-      SweetOut.printLine("Graph Size:" + graph.vertices.count(), 1)
-      val vertexSeq = graph.vertices.map(v => v._1).collect().toSeq
+//      var graph = theGraphIO.LoadGraph(spark, file, TotalWordEmbed)
+//      theGraphIO.MakeVisualizedGraphFile(spark, graph)
+//      var IdentificationMapText = ""
+//      NewIdentificationMap.keys.foreach {
+//        Key =>
+//          IdentificationMapText += Key + "\t" + NewIdentificationMap(Key)
+//      }
+//      theIO.WriteToFile(spark, AppConfig.IdentificationMapPath, IdentificationMapText, false)
+//      SweetOut.printLine("Graph Size:" + graph.vertices.count(), 1)
+//      val vertexSeq = graph.vertices.map(v => v._1).collect().toSeq
       var VertexMap: Seq[(Long, Double)] = null
-      VertexMap= vertexSeq.map(VertexID=>(VertexID,0d))
+      VertexMap= NewIdentificationMap.keySet.toSeq.map(VertexID=>(VertexID,0d))
 //      if (AppConfig.GraphImportanceMethod == AppConfig.METHOD_ECCENTERICITY)
 //        VertexMap = SweetGraph.getEccentericity(graph, vertexSeq).collect
 //      else if (AppConfig.GraphImportanceMethod == AppConfig.METHOD_DEGREE)

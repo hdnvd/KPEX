@@ -4,18 +4,18 @@ import org.joda.time.DateTime
 
 object SweetOut {
 
-  def printLine(x:Any): Unit =
+  def printLine(x:String): Unit =
   {
 //    println(DateTime.now()+x.toString)
     printLine(x,1)
   }
-  def printLine(x:Any,Priority:Int): Unit =
+  def printLine(x:String,Priority:Int): Unit =
   {
-    if(Priority>=5)
-      printLine(x)
+    if(Priority>=9)
+      println(DateTime.now()+x)
   }
   def printOne(x:Any): Unit =
   {
-    print(DateTime.now()+x.toString)
+    print(x.toString)
   }
 }

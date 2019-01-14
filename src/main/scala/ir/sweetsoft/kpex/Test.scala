@@ -3,6 +3,8 @@ package ir.sweetsoft.kpex
 import ir.sweetsoft.common.SweetOut
 import ir.sweetsoft.nlp.NLPTools
 
+import scala.util.hashing.MurmurHash3
+
 class Test(ApplicationContext:KpexContext) extends KpexClass(ApplicationContext:KpexContext){
 
   private[this] var _TestID: Int = -1
@@ -19,6 +21,9 @@ class Test(ApplicationContext:KpexContext) extends KpexClass(ApplicationContext:
     _FullText = value
     val nlp=new NLPTools(appContext)
     val TestWords:Seq[String]=nlp.GetStringWords(value)
+    TestWords.foreach(word=>{
+      appContext.NewIdentificationMap=appContext.NewIdentificationMap+(MurmurHash3.stringHash(word).toLong->word)
+    })
     Words=TestWords
   }
 
@@ -43,12 +48,31 @@ class Test(ApplicationContext:KpexContext) extends KpexClass(ApplicationContext:
       val NormalizedPhrase=getNormalizedPhrase(PhrasePostag._1,TestID)
       SweetOut.printLine("ExtractedPhrase"+NormalizedPhrase,1)
       var thePhrase=new Phrase(appContext)
+      thePhrase.maxWordCount=3
       thePhrase.Phrase=NormalizedPhrase
-      _ExtractedPhrases=_ExtractedPhrases:+thePhrase
+      thePhrase.TestID=TestID
+      thePhrase.words.foreach(word=>appContext.TotalWordEmbed.addNounPhraseWord(TestID,word))
+
+//      SweetOut.printLine("HD:"+thePhrase.Phrase,10)
+      if(!ExtractedPhrases.exists(Phrase=>Phrase.Phrase==thePhrase.Phrase))
+        _ExtractedPhrases=_ExtractedPhrases:+thePhrase
+      else
+        {
+//          SweetOut.printLine("HHAADDII:"+thePhrase.Phrase,10)
+          _ExtractedPhrases=_ExtractedPhrases.map(Phrase=> {
+            if(Phrase.Phrase == thePhrase.Phrase)
+              Phrase.OccurrenceInTest=Phrase.OccurrenceInTest+1
+            Phrase
+          })
+        }
     })
     _ExtractedPosTags = value
-  }
 
+  }
+//  def commitChanges(): Unit =
+//  {
+//    ExtractedPhrases.foreach(phrase=>phrase.commitChanges())
+//  }
   private def getNormalizedPhrase(Phrase:String,TestID:Int): String =
   {
     val nlp=new NLPTools(appContext)
@@ -56,8 +80,11 @@ class Test(ApplicationContext:KpexContext) extends KpexClass(ApplicationContext:
     var Result=""
     Words.foreach(Word=>
     {
-      val lemmatizedWord=nlp.GetNormalizedAndLemmatizedWord(Word,TestID).toLowerCase()
-      Result=Result+" "+nlp.removeSingleCharactersAndSeparateWithSpace(lemmatizedWord).trim
+      var lemmatizedWord=nlp.GetNormalizedAndLemmatizedWord(Word,TestID)
+//      lemmatizedWord=nlp.stem(Word)
+      val lemmatizedWordAfterRemovedExtras=nlp.removeSingleCharactersAndSeparateWithSpace(lemmatizedWord).trim
+      if(lemmatizedWordAfterRemovedExtras!="")
+      Result=Result+" "+lemmatizedWordAfterRemovedExtras
     })
     Result.trim.toLowerCase
   }
