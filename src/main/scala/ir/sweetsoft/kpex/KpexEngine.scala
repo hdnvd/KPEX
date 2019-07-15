@@ -81,7 +81,7 @@ class KpexEngine extends KpexContext {
     theVertexMap
 
   }
-  private def CalculateAndGetNounPhrasesRateByMeanVectors(): String = {
+  private def CalculateAndGetNounPhrasesRateByMeanVectors(VertexMap: Seq[(Long, Double)]): String = {
     SweetOut.printLine("NounPhrase Count"+CurrentCorpus.Tests(currentTestID).ExtractedPhrases.length,1)
     val NPMap:Seq[(Phrase,Double)] = CurrentCorpus.Tests(currentTestID).ExtractedPhrases.flatMap {
       np =>
@@ -114,6 +114,14 @@ class KpexEngine extends KpexContext {
                   wordRate=wordRate+wordRate/DistanceFromPhraseHead
                 else if(DistanceFromPhraseHead==0)
                   wordRate=wordRate+wordRate/4
+                var OldRateOfWord=0d
+                val OldWordWithRate=VertexMap.filter(aWord=>NewIdentificationMap(aWord._1)==word)
+                if(OldWordWithRate.nonEmpty)
+                  {
+                    SweetOut.printLine("OldWord"+word,10)
+                    OldRateOfWord=OldWordWithRate.last._2
+                  }
+                wordRate=wordRate+OldRateOfWord
                 rate = rate +wordRate
               }
               //          rate=PhraseDistanceFromCorpus/PhraseDistanceFromTest
@@ -388,7 +396,6 @@ class KpexEngine extends KpexContext {
     var vmap: Seq[(Long, Double)] = VertexMap
 //    vmap = ReRateWordsBySimilarities(vmap)
 //    vmap = ReRateWordsByBeingInNounPhrases(vmap)
-
     val SortedVertexMap = vmap.sortBy(-_._2)
     var Result = ""
     var WordRateResult=CalculateAndGetAllWordsRate(SortedVertexMap, CurrentCorpus.Tests(currentTestID).GoldPhrases)
@@ -397,7 +404,7 @@ class KpexEngine extends KpexContext {
     Result = "\r\n**\t****************************************\t**" + Result
     Result = "\r\n**\t****************************************\t**" + Result
     Result = "\r\n**\t****************************************\t**" + Result
-    Result = CalculateAndGetNounPhrasesRateByMeanVectors() + Result
+    Result = CalculateAndGetNounPhrasesRateByMeanVectors(vmap) + Result
     Exact_AlgorithmRate = Exact_AlgorithmRate / AppConfig.ResultKeywordsCount
     Exact_AlgorithmRate = Exact_AlgorithmRate / CurrentCorpus.Tests(currentTestID).GoldPhrases.length
     val ExactRateInt = (Exact_AlgorithmRate * 10000000).toInt

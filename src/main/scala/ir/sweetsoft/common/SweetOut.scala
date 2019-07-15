@@ -11,7 +11,7 @@ object SweetOut {
   }
   def printLine(x:String,Priority:Int): Unit =
   {
-    if(Priority>=9)
+    if(Priority>=1)
       println(DateTime.now()+x)
   }
   def printOne(x:Any): Unit =

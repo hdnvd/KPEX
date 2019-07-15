@@ -93,7 +93,7 @@ class NLPTools(ApplicationContext:KpexContext) extends KpexClass(ApplicationCont
     }
     val sentences = GetAnnotation(theText)
     for (sentence <- sentences; token <- sentence.get(classOf[TokensAnnotation])) {
-      var lemma = token.get(classOf[LemmaAnnotation])
+      val lemma = token.get(classOf[LemmaAnnotation])
       if (lemma.length > 0 && replaceExtraCharactersFromWord(lemma).trim.length>0){
         val MapItem=token.get(classOf[TextAnnotation]).toLowerCase.trim->lemma
         if(appContext.LemmatizationMaps.keySet.contains(TestID))

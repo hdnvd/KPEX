@@ -127,17 +127,47 @@ SweetOut.printLine("twstID"+AppConfig.DatabaseTestIDsString,10)
       // Removed At 97/06/17 val normalWord = TextMan.replace(word, Seq(), false)
       val wordVector=wordVectors.filter(row=>row.getString(4).equals(word)).take(1)
       val wordLemma = nlp.GetNormalizedAndLemmatizedWord(word,currentTestID)
+
       if (wordVector.length > 0 && wordLemma.length > 0) {
         SweetOut.printLine("Word Is " + word+" made "+wordLemma+" And Has Vector",1)
-          val StringVector=wordVector(0).getString(5).split(",")
-          val IntVector:Array[Double]=StringVector.map(sv=>sv.toDouble)
-        TotalWordEmbed.PutWordVector(TestID,wordLemma,IntVector)
+        addVectorFromVectorString(wordVector(0).getString(5),wordLemma,TestID)
       }
       else {
-        SweetOut.printLine("Word Is "+word+" made "+wordLemma+"  And Has No Vector",1)
+//        if(LemmatizationMaps(TestID).keySet.exists(key=>key.equals(word))) {
+//
+//          val wordFullLemma = LemmatizationMaps(TestID)(word)
+//          if (!wordFullLemma.equals(word) && wordFullLemma.length>0) {
+//            SweetOut.printLine("Now Testing " + wordFullLemma + " instead of " + word, 1)
+//            val wordVector2 = spark.read
+//              .format("jdbc")
+//              .option("url", MysqlConfigs.getProperty("url"))
+//              .option("user", MysqlConfigs.getProperty("user"))
+//              .option("password", MysqlConfigs.getProperty("password"))
+//              .option("dbtable", "(SELECT * FROM sweetp_kpex_wordvectorsenna WHERE trim(word) = '" + wordFullLemma + "' limit 0,1) wv")
+//              .load().collect()
+//            if (wordVector2.nonEmpty) {
+//
+//              SweetOut.printLine("Now It Is NonEmpty ", 1)
+//              addVectorFromVectorString(wordVector2(0).getString(5), wordLemma, TestID)
+//            }
+//            else
+//              SweetOut.printLine("Not Found Vector", 1)
+//          }
+//          else
+//            SweetOut.printLine("Word Is "+word+" made "+wordLemma+"  And Has No Vector",1)
+//        }
+//        else
+            SweetOut.printLine("No Lemma For Word",1)
+
       }
 
     })
+  }
+  private def addVectorFromVectorString(VectorString:String,word:String,TestID:Int): Unit =
+  {
+    val StringVector=VectorString.split(",")
+    val IntVector:Array[Double]=StringVector.map(sv=>sv.toDouble)
+    TotalWordEmbed.PutWordVector(TestID,word,IntVector)
   }
 
   override protected def Init(spark: SparkSession, args: Array[String]): Unit = {
